@@ -36,6 +36,9 @@
 *.vcxproj.filters
 *.vcxproj.user
 
+# Exact files
+test.cpp
+
 # Folders
 Release/
 Debug/
