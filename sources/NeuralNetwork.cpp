@@ -16,7 +16,7 @@ NeuralNetwork::NeuralNetwork(const std::vector<unsigned> topology)
 		// fill up new layer with neurons
 		for (int neuronNum = 0; neuronNum <= topology[layerNum]; neuronNum++)
 		{
-			layers.back().push_back(Neuron(numOfOutputs));
+			layers.back().push_back(Neuron(numOfOutputs, neuronNum));
 		}
 	}
 }
