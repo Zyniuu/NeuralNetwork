@@ -26,7 +26,7 @@ void NeuralNetwork::feedForfward(const std::vector<double>& inputValues)
 	// check if provided number of values is the same as number of inputs in NeuralNet
 	if (inputValues.size() != layers[0].size() - 1)
 	{
-		std::cout << "Incorrect number of input values" << std::endl;
+		std::cout << "Number of input values is different from number of input neurons." << std::endl;
 		exit(1);
 	}
 
