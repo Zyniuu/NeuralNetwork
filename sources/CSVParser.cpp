@@ -45,6 +45,13 @@ const std::vector<T>& CSVParser<T>::getValues() const
 }
 
 template <typename T>
+void CSVParser<T>::restartFile()
+{
+    file.clear();
+    file.seekg(0, std::ios::beg);
+}
+
+template <typename T>
 void CSVParser<T>::getDataFromSingleLine()
 {
     if (!file.good())

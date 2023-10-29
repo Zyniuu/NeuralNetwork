@@ -17,5 +17,6 @@ public:
     void getDataFromSingleLine();
     T getTarget() const;
     const std::vector<T>& getValues() const;
+    void restartFile();
     ~CSVParser();
 };
