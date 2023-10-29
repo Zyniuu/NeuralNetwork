@@ -59,10 +59,4 @@ void NeuralNetwork::train(CSVParser<double>& parser)
 		predict(inputVals);
 		std::cout << "\n\n\n\n";
 	}
-
-	for (Layer* layer : layers) 
-	{
-		delete layer;
-	}
-	layers.clear();
 }
