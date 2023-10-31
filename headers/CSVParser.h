@@ -2,21 +2,24 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
+#include <iostream>
+#include <string>
 
-template <typename T>
+
 class CSVParser
 {
 private:
-    T target;
-    std::vector<T> values;
+    double target;
+    bool _hasHeader;
+    std::vector<double> values;
     std::ifstream file;
 
 public:
-    CSVParser(std::string filename, bool hasHeader);
+    CSVParser(std::string filename, bool hasHeader = false);
     bool endOfFile();
-    void getDataFromSingleLine();
-    T getTarget() const;
-    const std::vector<T>& getValues() const;
+    bool getDataFromSingleLine();
+    double getTarget() const;
+    const std::vector<double>& getValues() const;
     void restartFile();
     ~CSVParser();
 };

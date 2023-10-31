@@ -1,24 +1,25 @@
 #include "../headers/CSVParser.h"
 
-template <typename T>
-CSVParser<T>::CSVParser(std::string filename, bool hasHeader)
+
+CSVParser::CSVParser(std::string filename, bool hasHeader)
 {
+    _hasHeader = hasHeader;
     file.open(filename);
-    std::string line;
     // check if file has been opened
     if (!file.is_open())
     {
-        exit(3);
+        std::cerr << "Error: Unable to open the file: " << filename << std::endl;
+        exit(EXIT_FAILURE);
     }
     // if the file contains a header then skip it
     if (hasHeader)
     {
+        std::string line;
         getline(file, line);
     }
 }
 
-template <typename T>
-CSVParser<T>::~CSVParser()
+CSVParser::~CSVParser()
 {
     if (file.is_open())
     {
@@ -26,60 +27,62 @@ CSVParser<T>::~CSVParser()
     }
 }
 
-template <typename T>
-bool CSVParser<T>::endOfFile()
+bool CSVParser::endOfFile()
 {
     return (file.peek() == EOF);
 }
 
-template <typename T>
-T CSVParser<T>::getTarget() const
+double CSVParser::getTarget() const
 {
     return target;
 }
 
-template <typename T>
-const std::vector<T>& CSVParser<T>::getValues() const
+const std::vector<double>& CSVParser::getValues() const
 {
     return values;
 }
 
-template <typename T>
-void CSVParser<T>::restartFile()
+void CSVParser::restartFile()
 {
-    file.clear();
-    file.seekg(0, std::ios::beg);
+    if (file.is_open())
+    {
+        file.clear();
+        file.seekg(0, std::ios::beg);
+        if (_hasHeader)
+        {
+            std::string line;
+            std::getline(file, line);
+        }
+    }
 }
 
-template <typename T>
-void CSVParser<T>::getDataFromSingleLine()
+bool CSVParser::getDataFromSingleLine()
 {
-    if (!file.good())
+    if (file.is_open())
     {
-        return;
+        std::string line;
+        if (std::getline(file, line))
+        {
+            values.clear();
+            
+            std::istringstream ss(line);
+            std::string cell;
+            bool firstCell = true;
+
+            while (std::getline(ss, cell, ','))
+            {
+                if (firstCell)
+                {
+                    target = std::stod(cell);
+                    firstCell = false;
+                    continue;
+                }
+                else
+                    values.push_back(std::stod(cell));
+            }
+            return true;
+        }
+        return false;
     }
-    values.clear();
-
-    std::string line;
-    getline(file, line);
-    std::stringstream ss(line);
-
-    // treat the first element as a target
-    ss >> target;
-    if (ss.peek() == ',' || ss.peek() == ' ')
-        ss.ignore();
-
-    // rest of the values insert into vector
-    for (T i; ss >> i;)
-    {
-        values.push_back(i);
-        if (ss.peek() == ',' || ss.peek() == ' ')
-            ss.ignore();
-    }
-    ss.clear();
+    return false;
 }
-
-// resolve linking errors
-template class CSVParser<int>;
-template class CSVParser<double>;
-template class CSVParser<float>;

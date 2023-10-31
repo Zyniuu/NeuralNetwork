@@ -49,7 +49,7 @@ Matrix<double, Dynamic, 1> NeuralNetwork::vectorToEigenMatrix(const std::vector<
 	return eigenMatrix;
 }
 
-void NeuralNetwork::train(CSVParser<double>& parser)
+void NeuralNetwork::train(CSVParser& parser)
 {
 	while (!parser.endOfFile())
 	{
