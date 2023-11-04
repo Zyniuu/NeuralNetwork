@@ -21,5 +21,6 @@ public:
     double getTarget() const;
     const std::vector<double>& getValues() const;
     void restartFile();
+    int countLines();
     ~CSVParser();
 };

@@ -86,3 +86,12 @@ bool CSVParser::getDataFromSingleLine()
     }
     return false;
 }
+
+int CSVParser::countLines()
+{
+    int lines = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
+    if (_hasHeader)
+        lines -= 1;
+    restartFile();
+    return lines;
+}

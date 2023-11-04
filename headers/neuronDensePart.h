@@ -10,4 +10,5 @@ protected:
 public:
 	NeuronDensePart(int input_size, int output_size);
 	Matrix<double, Dynamic, 1> feedForward(Matrix<double, Dynamic, 1> inputVals);
+	Matrix<double, Dynamic, 1> backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate);
 };
