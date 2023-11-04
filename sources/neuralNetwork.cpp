@@ -180,7 +180,7 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 			Matrix<double, Dynamic, 1> gradient = meanSquaredErrorPrime(y, output);
 			for (auto iter = layers.rbegin(); iter != layers.rend(); ++iter)
 			{
-				gradient = (*iter)->backPropagation(gradient, learning_rate);
+				gradient = (*iter)->backPropagation(gradient, learning_rate, i);
 			}
 		}
 		_error /= numberOfSamples;

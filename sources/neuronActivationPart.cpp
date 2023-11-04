@@ -13,7 +13,7 @@ Matrix<double, Dynamic, 1> NeuronActivationPart::feedForward(Matrix<double, Dyna
 	return activationFunc(inputMatrix);
 }
 
-Matrix<double, Dynamic, 1> NeuronActivationPart::backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate)
+Matrix<double, Dynamic, 1> NeuronActivationPart::backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate, int epoch)
 {
 	return gradient.cwiseProduct(activationFuncPrime(inputMatrix));
 }
