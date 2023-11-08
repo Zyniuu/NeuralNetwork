@@ -140,9 +140,11 @@ Matrix<double, Dynamic, 1> NeuralNetwork::vectorToEigenMatrix(const std::vector<
 
 Matrix<double, Dynamic, 1> NeuralNetwork::normalizeVector(Matrix<double, Dynamic, 1>& vectorToNormalize)
 {
-	double minVal = vectorToNormalize.minCoeff();
-	double maxVal = vectorToNormalize.maxCoeff();
-	return (vectorToNormalize.array() - minVal) / (maxVal - minVal);
+	minInputValue = vectorToNormalize.minCoeff() < minInputValue ? vectorToNormalize.minCoeff() : minInputValue;
+	maxInputValue = vectorToNormalize.maxCoeff() > maxInputValue ? vectorToNormalize.maxCoeff() : maxInputValue;
+	if (minInputValue == maxInputValue)
+		return vectorToNormalize;
+	return (vectorToNormalize.array() - minInputValue) / (maxInputValue - minInputValue);
 }
 
 double NeuralNetwork::meanSquaredError(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output)
@@ -160,6 +162,11 @@ Matrix<double, Dynamic, 1> NeuralNetwork::meanSquaredErrorPrime(Matrix<double, D
 void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 {
 	int numberOfSamples = parser.countLines();
+	parser.getDataFromSingleLine();
+	Matrix<double, Dynamic, 1> temp = vectorToEigenMatrix(parser.getValues());
+	maxInputValue = temp.maxCoeff();
+	minInputValue = temp.minCoeff();
+	parser.restartFile();
 	for (int i = 0; i < epochs; i++)
 	{
 		double _error = 0.0;
