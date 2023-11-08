@@ -19,6 +19,8 @@ private:
 	std::vector<Layer*> layers;
 	std::vector<unsigned> _topology;
 	int labels;
+	double maxInputValue;
+	double minInputValue;
 
 	Matrix<double, Dynamic, 1> vectorToEigenMatrix(const std::vector<double>& inputVector);
 	Matrix<double, Dynamic, 1> labelToEigenMatrix(int label);
