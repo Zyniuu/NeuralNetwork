@@ -44,3 +44,4 @@ Release/
 Debug/
 x64/
 *.csv
+*.xml

@@ -19,6 +19,8 @@ private:
 	std::vector<Layer*> layers;
 	std::vector<unsigned> _topology;
 	int labels;
+	int _activationFunction;
+	int _outputActivationFunction;
 	double maxInputValue;
 	double minInputValue;
 
@@ -35,4 +37,5 @@ public:
 	double meanSquaredError(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output);
 	Matrix<double, Dynamic, 1> meanSquaredErrorPrime(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output);
 	void train(CSVParser& parser, int epochs, double learning_rate);
+	bool saveNetworkToFile(std::string filename);
 };

@@ -4,6 +4,8 @@
 NeuralNetwork::NeuralNetwork(std::vector<unsigned>& topology, int activationFunction, int outputActivationFunction)
 {
 	_topology = topology;
+	_activationFunction = activationFunction;
+	_outputActivationFunction = outputActivationFunction;
 	if (!_topology.empty())
 		labels = _topology.back();
 	switch (activationFunction)
@@ -194,4 +196,103 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 		std::cout << i + 1 << "/" << epochs << "\terror = " << _error << std::endl;
 		parser.restartFile();
 	}
+}
+
+bool NeuralNetwork::saveNetworkToFile(std::string filename)
+{
+	std::cout << "Starting the save function..." << std::endl;
+	// Create document root 
+	std::cout << "Creating tree root..." << std::endl;
+	rapidxml::xml_document<> doc;
+	rapidxml::xml_node<>* root = doc.allocate_node(rapidxml::node_element, "NeuralNetwork");
+	doc.append_node(root);
+	// Create topology node
+	std::cout << "Saving topology structure..." << std::endl;
+	rapidxml::xml_node<>* topologyNode = doc.allocate_node(rapidxml::node_element, "Topology");
+	root->append_node(topologyNode);
+	// Attach values to topology
+	std::vector<unsigned>::iterator iter = _topology.begin();
+	for (iter; iter < _topology.end(); iter++)
+	{
+		rapidxml::xml_node<>* valueNode = doc.allocate_node(rapidxml::node_element, "Value");
+		valueNode->value(doc.allocate_string(std::to_string(*iter).c_str()));
+		topologyNode->append_node(valueNode);
+	}
+	// Create nodes for activation functions inside root node
+	std::cout << "Saving activation nodes structure..." << std::endl;
+	root->append_node(
+		doc.allocate_node(
+			rapidxml::node_element, 
+			"ActivationFunction", 
+			doc.allocate_string(std::to_string(_activationFunction).c_str())
+		)
+	);
+	root->append_node(
+		doc.allocate_node(
+			rapidxml::node_element, 
+			"OutputActivationFunction", 
+			doc.allocate_string(std::to_string(_outputActivationFunction).c_str())
+		)
+	);
+	// Crete node for layers inside root node
+	std::cout << "Creating node for layers..." << std::endl;
+	rapidxml::xml_node<>* layersNode = doc.allocate_node(rapidxml::node_element, "Layers");
+	root->append_node(layersNode);
+
+	for (Layer* layer : layers)
+	{
+		if (layer->isNeuronDensePart())
+		{
+			std::cout << "Saving layer weights..." << std::endl;
+			// Create node for each dense layer
+			rapidxml::xml_node<>* layerNode = doc.allocate_node(rapidxml::node_element, "Layer");
+			layersNode->append_node(layerNode);
+			NeuronDensePart* densePart = dynamic_cast<NeuronDensePart*>(layer);
+			// Add weights node to the layer
+			rapidxml::xml_node<>* weightsNode = doc.allocate_node(rapidxml::node_element, "Weights");
+			layerNode->append_node(weightsNode);
+			// Add bias node to the layer
+			rapidxml::xml_node<>* biasNode = doc.allocate_node(rapidxml::node_element, "Bias");
+			layerNode->append_node(biasNode);
+			// To the weights node add individual weights from the weights matrix
+			Matrix<double, Dynamic, Dynamic> weightsMatrix = densePart->getWeightsMatrix();
+			for (int i = 0; i < weightsMatrix.rows(); i++)
+			{
+				for (int j = 0; j < weightsMatrix.cols(); j++)
+				{
+					double value = weightsMatrix(i, j);
+					weightsNode->append_node(
+						doc.allocate_node(
+							rapidxml::node_element,
+							"Value",
+							doc.allocate_string(std::to_string(value).c_str())
+						)
+					);
+				}
+			}
+			// To the bias node add weights from the bias weights matrix
+			std::cout << "Saving layer bias..." << std::endl;
+			Matrix<double, Dynamic, 1> biasMatrix = densePart->getBiasMatrix();
+			for (int i = 0; i < biasMatrix.size(); i++)
+			{
+				double value = biasMatrix(i);
+				biasNode->append_node(
+					doc.allocate_node(
+						rapidxml::node_element,
+						"Value",
+						doc.allocate_string(std::to_string(value).c_str())
+					)
+				);
+			}
+		}
+	}
+	// Save tree to file and free memory
+	std::cout << "Saving to file..." << std::endl;
+	std::ofstream file(filename);
+	file << doc;
+	file.close();
+	std::cout << "Freeing memory..." << std::endl;
+	doc.clear();
+	std::cout << "DONE" << std::endl;
+	return true;
 }
