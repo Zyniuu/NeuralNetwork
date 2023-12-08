@@ -2,82 +2,95 @@
 
 
 NeuralNetwork::NeuralNetwork(std::vector<unsigned>& topology, int activationFunction, int outputActivationFunction)
+	: _topology(topology), _activationFunction(activationFunction), _outputActivationFunction(outputActivationFunction)
 {
-	_topology = topology;
-	_activationFunction = activationFunction;
-	_outputActivationFunction = outputActivationFunction;
 	if (!_topology.empty())
 		labels = _topology.back();
-	switch (activationFunction)
+	ActivationPair activationPair
+	{ 
+		static_cast<ActivationFunction>(_activationFunction),
+		static_cast<ActivationFunction>(_outputActivationFunction) 
+	};
+	if (activationMap.find(activationPair) != activationMap.end())
 	{
-	case TANH:
-		switch (outputActivationFunction)
+		activationMap[activationPair](std::vector<LayerData>());
+	}
+	else
+	{
+		std::cerr << "Error: Activation pair not found in map." << std::endl;
+		exit(3);
+	}
+}
+
+NeuralNetwork::NeuralNetwork(std::string filename)
+{
+	std::ifstream file(filename);
+	if (!file.is_open())
+	{
+		std::cerr << "Can't open file " << filename << std::endl;
+		exit(3);
+	}
+	std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	buffer.push_back('\0');
+	rapidxml::xml_document<> doc;
+	doc.parse<0>(&buffer[0]);
+
+	rapidxml::xml_node<>* root = doc.first_node("NeuralNetwork");
+	if (root == nullptr)
+	{
+		std::cerr << "Incorrect file format" << std::endl;
+		exit(3);
+	}
+
+	std::vector<LayerData> layersData;
+	rapidxml::xml_node<>* node = root->first_node();
+
+	while (node)
+	{
+		std::string nodeName = node->name();
+		if (nodeName == "Topology")
 		{
-		case RELU:
-			fillLayers<TanhActivation, ReLUActivation>();
-			break;
-		case SIGMOID:
-			fillLayers<TanhActivation, SigmoidActivation>();
-			break;
-		case TANH:
-			fillLayers<TanhActivation, TanhActivation>();
-			break;
-		case SOFTMAX:
-			fillLayers<TanhActivation, SoftmaxActivation>();
-			break;
+			_topology = getNodeIntValues(node);
 		}
-		break;
-	case RELU:
-		switch (outputActivationFunction)
+		else if (nodeName == "ActivationFunction")
+			_activationFunction = std::stoi(node->value());
+		else if (nodeName == "OutputActivationFunction")
+			_outputActivationFunction = std::stoi(node->value());
+		else if (nodeName == "Layers")
 		{
-		case RELU:
-			fillLayers<ReLUActivation, ReLUActivation>();
-			break;
-		case SIGMOID:
-			fillLayers<ReLUActivation, SigmoidActivation>();
-			break;
-		case TANH:
-			fillLayers<ReLUActivation, TanhActivation>();
-			break;
-		case SOFTMAX:
-			fillLayers<ReLUActivation, SoftmaxActivation>();
-			break;
+			rapidxml::xml_node<>* layerNode = node->first_node("Layer");
+			std::vector<unsigned>::iterator iter = _topology.begin();
+			for (iter; iter < _topology.end() - 1; iter++)
+			{
+				int inputSize = *iter;
+				int outputSize = *(iter + 1);
+				rapidxml::xml_node<>* weightsNode = layerNode->first_node("Weights");
+				VectorXd tempVec = getNodeValues(weightsNode, inputSize * outputSize);
+				MatrixXd weights = eigenVectorToEigenMatrix(tempVec, outputSize, inputSize);
+				rapidxml::xml_node<>* biasNode = layerNode->first_node("Bias");
+				VectorXd bias = getNodeValues(biasNode, outputSize);
+				layersData.push_back({ weights, bias });
+				layerNode = layerNode->next_sibling("Layer");
+			}
 		}
-		break;
-	case SIGMOID:
-		switch (outputActivationFunction)
-		{
-		case RELU:
-			fillLayers<SigmoidActivation, ReLUActivation>();
-			break;
-		case SIGMOID:
-			fillLayers<SigmoidActivation, SigmoidActivation>();
-			break;
-		case TANH:
-			fillLayers<SigmoidActivation, TanhActivation>();
-			break;
-		case SOFTMAX:
-			fillLayers<SigmoidActivation, SoftmaxActivation>();
-			break;
-		}
-		break;
-	case SOFTMAX:
-		switch (outputActivationFunction)
-		{
-		case RELU:
-			fillLayers<SoftmaxActivation, ReLUActivation>();
-			break;
-		case SIGMOID:
-			fillLayers<SoftmaxActivation, SigmoidActivation>();
-			break;
-		case TANH:
-			fillLayers<SoftmaxActivation, TanhActivation>();
-			break;
-		case SOFTMAX:
-			fillLayers<SoftmaxActivation, SoftmaxActivation>();
-			break;
-		}
-		break;
+		node = node->next_sibling();
+	}
+
+	file.close();
+
+	ActivationPair activationPair
+	{
+		static_cast<ActivationFunction>(_activationFunction),
+		static_cast<ActivationFunction>(_outputActivationFunction)
+	};
+	if (activationMap.find(activationPair) != activationMap.end())
+	{
+		activationMap[activationPair](layersData);
+	}
+	else
+	{
+		std::cerr << "Error: Activation pair not found in map." << std::endl;
+		exit(3);
 	}
 }
 
@@ -88,6 +101,42 @@ NeuralNetwork::~NeuralNetwork()
 		delete layer;
 	}
 	layers.clear();
+}
+
+std::vector<unsigned> NeuralNetwork::getNodeIntValues(rapidxml::xml_node<>* node)
+{
+	std::vector<unsigned> out;
+	rapidxml::xml_node<>* valueNode = node->first_node("Value");
+	while (valueNode)
+	{
+		out.push_back(std::stoi(valueNode->value()));
+		valueNode = valueNode->next_sibling("Value");
+	}
+	return out;
+}
+
+VectorXd NeuralNetwork::getNodeValues(rapidxml::xml_node<>* node, int numOfValues)
+{
+	VectorXd out;
+	out.resize(numOfValues);
+	int i = 0;
+	rapidxml::xml_node<>* valueNode = node->first_node("Value");
+	while (valueNode)
+	{
+		out(i) = std::stod(valueNode->value());
+		valueNode = valueNode->next_sibling("Value");
+		i++;
+	}
+	return out;
+}
+
+template <class T, class Z>
+void NeuralNetwork::setActivationClasses(const std::vector<LayerData>& layersData)
+{
+	if (layersData.size() <= 0)
+		fillLayers<T, Z>();
+	else
+		fillLayers<T, Z>(layersData);
 }
 
 VectorXd NeuralNetwork::labelToEigenMatrix(int label)
@@ -106,6 +155,20 @@ void NeuralNetwork::fillLayers()
 	{
 		layers.push_back(new NeuronDensePart(*iter, *(iter + 1)));
 		if (std::next(iter) == _topology.end() - 1)
+			layers.push_back(new Z());
+		else
+			layers.push_back(new T());
+	}
+}
+
+template <class T, class Z>
+void NeuralNetwork::fillLayers(const std::vector<LayerData>& layersData)
+{
+	auto iter = layersData.begin();
+	for (iter; iter < layersData.end(); iter++)
+	{
+		layers.push_back(new NeuronDensePart(iter->weights, iter->bias));
+		if (std::next(iter) == layersData.end())
 			layers.push_back(new Z());
 		else
 			layers.push_back(new T());
@@ -131,6 +194,16 @@ VectorXd NeuralNetwork::predict(std::vector<double> inputVals)
 		output = layer->feedForward(output);
 	}
 	return output;
+}
+
+MatrixXd NeuralNetwork::eigenVectorToEigenMatrix(const VectorXd& inputVector, int rows, int cols)
+{
+	MatrixXd temp(cols, rows);
+	for (int i = 0; i < cols * rows; i++)
+		temp(i) = inputVector(i);
+	MatrixXd out(rows, cols);
+	out = temp.transpose();
+	return out;
 }
 
 VectorXd NeuralNetwork::vectorToEigenMatrix(const std::vector<double>& inputVector)
@@ -200,14 +273,12 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 
 bool NeuralNetwork::saveNetworkToFile(std::string filename)
 {
-	std::cout << "Starting the save function..." << std::endl;
+	std::cout << "Saving the neural network..." << std::endl;
 	// Create document root 
-	std::cout << "Creating tree root..." << std::endl;
 	rapidxml::xml_document<> doc;
 	rapidxml::xml_node<>* root = doc.allocate_node(rapidxml::node_element, "NeuralNetwork");
 	doc.append_node(root);
 	// Create topology node
-	std::cout << "Saving topology structure..." << std::endl;
 	rapidxml::xml_node<>* topologyNode = doc.allocate_node(rapidxml::node_element, "Topology");
 	root->append_node(topologyNode);
 	// Attach values to topology
@@ -219,7 +290,6 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 		topologyNode->append_node(valueNode);
 	}
 	// Create nodes for activation functions inside root node
-	std::cout << "Saving activation nodes structure..." << std::endl;
 	root->append_node(
 		doc.allocate_node(
 			rapidxml::node_element, 
@@ -235,7 +305,6 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 		)
 	);
 	// Crete node for layers inside root node
-	std::cout << "Creating node for layers..." << std::endl;
 	rapidxml::xml_node<>* layersNode = doc.allocate_node(rapidxml::node_element, "Layers");
 	root->append_node(layersNode);
 
@@ -243,7 +312,6 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 	{
 		if (layer->isNeuronDensePart())
 		{
-			std::cout << "Saving layer weights..." << std::endl;
 			// Create node for each dense layer
 			rapidxml::xml_node<>* layerNode = doc.allocate_node(rapidxml::node_element, "Layer");
 			layersNode->append_node(layerNode);
@@ -271,7 +339,6 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 				}
 			}
 			// To the bias node add weights from the bias weights matrix
-			std::cout << "Saving layer bias..." << std::endl;
 			VectorXd biasMatrix = densePart->getBiasMatrix();
 			for (int i = 0; i < biasMatrix.size(); i++)
 			{
@@ -287,7 +354,6 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 		}
 	}
 	// Save tree to file and free memory
-	std::cout << "Saving to file..." << std::endl;
 	std::ofstream file(filename);
 	file << doc;
 	file.close();

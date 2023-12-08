@@ -2,8 +2,6 @@
 #include "../addons/EigenRand/EigenRand"
 #include "../addons/rapidxml/rapidxml.hpp"
 #include "../addons/rapidxml/rapidxml_print.hpp"
-#include "../addons/rapidxml/rapidxml_iterators.hpp"
-#include "../addons/rapidxml/rapidxml_utils.hpp"
 #include <iostream>
 
 

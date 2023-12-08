@@ -87,6 +87,23 @@ bool CSVParser::getDataFromSingleLine()
     return false;
 }
 
+bool CSVParser::getDataAt(int index)
+{
+    if (file.is_open())
+    {
+        for (int i = 0; i <= index; i++)
+        {
+            if (!getDataFromSingleLine())
+            {
+                restartFile();
+                return false;
+            }
+        }
+    }
+    restartFile();
+    return true;
+}
+
 int CSVParser::countLines()
 {
     int lines = std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n');
