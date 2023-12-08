@@ -24,18 +24,18 @@ private:
 	double maxInputValue;
 	double minInputValue;
 
-	Matrix<double, Dynamic, 1> vectorToEigenMatrix(const std::vector<double>& inputVector);
-	Matrix<double, Dynamic, 1> labelToEigenMatrix(int label);
-	Matrix<double, Dynamic, 1> normalizeVector(Matrix<double, Dynamic, 1>& vectorToNormalize);
+	VectorXd vectorToEigenMatrix(const std::vector<double>& inputVector);
+	VectorXd labelToEigenMatrix(int label);
+	VectorXd normalizeVector(VectorXd& vectorToNormalize);
 	template <class T, class Z>
 	void fillLayers();
 public:
 	NeuralNetwork(std::vector<unsigned>& topology, int activationFunction, int outputActivationFunction);
 	~NeuralNetwork();
-	Matrix<double, Dynamic, 1> predict(Matrix<double, Dynamic, 1> inputVals);
-	Matrix<double, Dynamic, 1> predict(std::vector<double> inputVals);
-	double meanSquaredError(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output);
-	Matrix<double, Dynamic, 1> meanSquaredErrorPrime(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output);
+	VectorXd predict(VectorXd inputVals);
+	VectorXd predict(std::vector<double> inputVals);
+	double meanSquaredError(VectorXd true_output, VectorXd predicted_output);
+	VectorXd meanSquaredErrorPrime(VectorXd true_output, VectorXd predicted_output);
 	void train(CSVParser& parser, int epochs, double learning_rate);
 	bool saveNetworkToFile(std::string filename);
 };

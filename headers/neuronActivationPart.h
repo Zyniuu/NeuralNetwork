@@ -6,10 +6,10 @@
 class NeuronActivationPart : public Layer
 {
 protected:
-	Matrix<double, Dynamic, 1> (*activationFunc)(Matrix<double, Dynamic, 1>);
-	Matrix<double, Dynamic, 1> (*activationFuncPrime)(Matrix<double, Dynamic, 1>);
+	VectorXd(*activationFunc)(VectorXd);
+	VectorXd(*activationFuncPrime)(VectorXd);
 
-	NeuronActivationPart(Matrix<double, Dynamic, 1> (*_activationFunc)(Matrix<double, Dynamic, 1>), Matrix<double, Dynamic, 1> (*_activationFuncPrime)(Matrix<double, Dynamic, 1>));
-	Matrix<double, Dynamic, 1> feedForward(Matrix<double, Dynamic, 1> inputVals);
-	Matrix<double, Dynamic, 1> backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate);
+	NeuronActivationPart(VectorXd (*_activationFunc)(VectorXd), VectorXd (*_activationFuncPrime)(VectorXd));
+	VectorXd feedForward(VectorXd inputVals);
+	VectorXd backPropagation(VectorXd gradient, double learning_rate);
 };

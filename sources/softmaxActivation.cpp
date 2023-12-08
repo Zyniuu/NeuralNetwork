@@ -1,14 +1,14 @@
 #include "../headers/SoftmaxActivation.h"
 
 
-Matrix<double, Dynamic, 1> SoftmaxActivation::feedForward(Matrix<double, Dynamic, 1> inputVals)
+VectorXd SoftmaxActivation::feedForward(VectorXd inputVals)
 {
-	Matrix<double, Dynamic, 1> expVals = inputVals.array().exp();
+	VectorXd expVals = inputVals.array().exp();
 	outputMatrix = expVals / expVals.sum();
 	return outputMatrix;
 }
 
-Matrix<double, Dynamic, 1> SoftmaxActivation::backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate)
+VectorXd SoftmaxActivation::backPropagation(VectorXd gradient, double learning_rate)
 {
 	/*
 	VectorXd softmax_result = outputMatrix;

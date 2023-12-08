@@ -90,9 +90,9 @@ NeuralNetwork::~NeuralNetwork()
 	layers.clear();
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::labelToEigenMatrix(int label)
+VectorXd NeuralNetwork::labelToEigenMatrix(int label)
 {
-	Matrix<double, Dynamic, 1> result = MatrixXd::Zero(labels, 1);
+	VectorXd result = MatrixXd::Zero(labels, 1);
 	if (label >= 0 && label < labels)
 		result(label, 0) = 1.0;
 	return result;
@@ -112,9 +112,9 @@ void NeuralNetwork::fillLayers()
 	}
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::predict(Matrix<double, Dynamic, 1> inputVals)
+VectorXd NeuralNetwork::predict(VectorXd inputVals)
 {
-	Matrix<double, Dynamic, 1> output = normalizeVector(inputVals);
+	VectorXd output = normalizeVector(inputVals);
 	for (Layer* layer : layers)
 	{
 		output = layer->feedForward(output);
@@ -122,9 +122,9 @@ Matrix<double, Dynamic, 1> NeuralNetwork::predict(Matrix<double, Dynamic, 1> inp
 	return output;
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::predict(std::vector<double> inputVals)
+VectorXd NeuralNetwork::predict(std::vector<double> inputVals)
 {
-	Matrix<double, Dynamic, 1> output = vectorToEigenMatrix(inputVals);
+	VectorXd output = vectorToEigenMatrix(inputVals);
 	output = normalizeVector(output);
 	for (Layer* layer : layers)
 	{
@@ -133,14 +133,14 @@ Matrix<double, Dynamic, 1> NeuralNetwork::predict(std::vector<double> inputVals)
 	return output;
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::vectorToEigenMatrix(const std::vector<double>& inputVector)
+VectorXd NeuralNetwork::vectorToEigenMatrix(const std::vector<double>& inputVector)
 {
 	Map<const VectorXd> eigenMap(inputVector.data(), inputVector.size());
 	VectorXd eigenMatrix = eigenMap;
 	return eigenMatrix;
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::normalizeVector(Matrix<double, Dynamic, 1>& vectorToNormalize)
+VectorXd NeuralNetwork::normalizeVector(VectorXd& vectorToNormalize)
 {
 	minInputValue = vectorToNormalize.minCoeff() < minInputValue ? vectorToNormalize.minCoeff() : minInputValue;
 	maxInputValue = vectorToNormalize.maxCoeff() > maxInputValue ? vectorToNormalize.maxCoeff() : maxInputValue;
@@ -149,13 +149,13 @@ Matrix<double, Dynamic, 1> NeuralNetwork::normalizeVector(Matrix<double, Dynamic
 	return (vectorToNormalize.array() - minInputValue) / (maxInputValue - minInputValue);
 }
 
-double NeuralNetwork::meanSquaredError(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output)
+double NeuralNetwork::meanSquaredError(VectorXd true_output, VectorXd predicted_output)
 {
-	Matrix<double, Dynamic, 1> _error = (true_output - predicted_output).array().square();
+	VectorXd _error = (true_output - predicted_output).array().square();
 	return _error.mean();
 }
 
-Matrix<double, Dynamic, 1> NeuralNetwork::meanSquaredErrorPrime(Matrix<double, Dynamic, 1> true_output, Matrix<double, Dynamic, 1> predicted_output)
+VectorXd NeuralNetwork::meanSquaredErrorPrime(VectorXd true_output, VectorXd predicted_output)
 {
 	double scale = 2.0 / true_output.size();
 	return scale * (predicted_output - true_output);
@@ -165,7 +165,7 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 {
 	int numberOfSamples = parser.countLines();
 	parser.getDataFromSingleLine();
-	Matrix<double, Dynamic, 1> temp = vectorToEigenMatrix(parser.getValues());
+	VectorXd temp = vectorToEigenMatrix(parser.getValues());
 	maxInputValue = temp.maxCoeff();
 	minInputValue = temp.minCoeff();
 	parser.restartFile();
@@ -175,9 +175,9 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 		while (!parser.endOfFile())
 		{
 			parser.getDataFromSingleLine();
-			Matrix<double, Dynamic, 1> inputVals = vectorToEigenMatrix(parser.getValues());
-			Matrix<double, Dynamic, 1> output = predict(inputVals);
-			Matrix<double, Dynamic, 1> y;
+			VectorXd inputVals = vectorToEigenMatrix(parser.getValues());
+			VectorXd output = predict(inputVals);
+			VectorXd y;
 			if (_topology.back() > 1)
 				y = labelToEigenMatrix(parser.getTarget());
 			else
@@ -186,7 +186,7 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 				y(0) = parser.getTarget();
 			}
 			_error += meanSquaredError(y, output);
-			Matrix<double, Dynamic, 1> gradient = meanSquaredErrorPrime(y, output);
+			VectorXd gradient = meanSquaredErrorPrime(y, output);
 			for (auto iter = layers.rbegin(); iter != layers.rend(); ++iter)
 			{
 				gradient = (*iter)->backPropagation(gradient, learning_rate);
@@ -272,7 +272,7 @@ bool NeuralNetwork::saveNetworkToFile(std::string filename)
 			}
 			// To the bias node add weights from the bias weights matrix
 			std::cout << "Saving layer bias..." << std::endl;
-			Matrix<double, Dynamic, 1> biasMatrix = densePart->getBiasMatrix();
+			VectorXd biasMatrix = densePart->getBiasMatrix();
 			for (int i = 0; i < biasMatrix.size(); i++)
 			{
 				double value = biasMatrix(i);
