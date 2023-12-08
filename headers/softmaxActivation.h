@@ -2,10 +2,11 @@
 #include "neuronActivationPart.h"
 
 
-class SoftmaxActivation : public NeuronActivationPart
+class SoftmaxActivation : public Layer
 {
+private:
+	VectorXd outputMatrix;
 public:
-	SoftmaxActivation() : NeuronActivationPart(&SoftmaxActivation::softmaxFunc, &SoftmaxActivation::softmaxPrime) {}
-	static Matrix<double, Dynamic, 1> softmaxFunc(Matrix<double, Dynamic, 1> inputVals);
-	static Matrix<double, Dynamic, 1> softmaxPrime(Matrix<double, Dynamic, 1> inputVals);
+	Matrix<double, Dynamic, 1> feedForward(Matrix<double, Dynamic, 1> inputVals);
+	Matrix<double, Dynamic, 1> backPropagation(Matrix<double, Dynamic, 1> gradient, double learning_rate);
 };
