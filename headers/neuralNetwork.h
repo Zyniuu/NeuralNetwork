@@ -7,11 +7,7 @@
 #include "CSVParser.h"
 
 
-const int TANH = 0;
-const int RELU = 1;
-const int SIGMOID = 2;
-const int SOFTMAX = 3;
-
+enum ActivationFunction { TANH, RELU, SIGMOID, SOFTMAX };
 
 class NeuralNetwork
 {
