@@ -259,6 +259,13 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 				y(0) = parser.getTarget();
 			}
 			_error += meanSquaredError(y, output);
+			if (std::isnan(_error))
+			{
+				std::cout << inputVals << std::endl;
+				std::cout << y << std::endl;
+				std::cout << output << std::endl;
+				std::getchar();
+			}
 			VectorXd gradient = meanSquaredErrorPrime(y, output);
 			for (auto iter = layers.rbegin(); iter != layers.rend(); ++iter)
 			{

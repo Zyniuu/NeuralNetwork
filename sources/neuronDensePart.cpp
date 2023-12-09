@@ -7,6 +7,8 @@ NeuronDensePart::NeuronDensePart(int input_size, int output_size)
 	double variance = 2.0 / (input_size + output_size);
 	weightsMatrix = getRandomWeights(output_size, input_size, 0.0, variance);
 	biasMatrix = getRandomBias(output_size, 0.0, variance);
+	momentumWeights = MatrixXd::Zero(output_size, input_size);
+	momentumBias = VectorXd::Zero(output_size);
 	// Create matrices for weights and bias with random values in range [-1,1]
 	// weightsMatrix = MatrixXd::Random(output_size, input_size);
 	// biasMatrix = MatrixXd::Random(output_size, 1);
@@ -40,7 +42,13 @@ VectorXd NeuronDensePart::backPropagation(VectorXd gradient, double learning_rat
 {
 	Matrix<double, Dynamic, Dynamic> gradient_weights = gradient * inputMatrix.transpose();
 	VectorXd gradient_input = weightsMatrix.transpose() * gradient;
-	weightsMatrix -= learning_rate * gradient_weights;
-	biasMatrix -= learning_rate * gradient;
+
+	// Calculate momentum
+	momentumWeights = (learning_rate * gradient_weights) + (momentumFactor * momentumWeights);
+	momentumBias = (learning_rate * gradient) + (momentumFactor * momentumBias);
+
+	// Apply momentum
+	weightsMatrix -= momentumWeights;
+	biasMatrix -= momentumBias;
 	return gradient_input;
 }

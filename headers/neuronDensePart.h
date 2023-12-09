@@ -7,6 +7,9 @@ class NeuronDensePart : public Layer
 private:
 	Matrix<double, Dynamic, Dynamic> getRandomWeights(int rows, int cols, double mean, double variance);
 	VectorXd getRandomBias(int size, double mean, double variance);
+	double momentumFactor = 0.9;
+	Matrix<double, Dynamic, Dynamic> momentumWeights;
+	VectorXd momentumBias;
 protected:
 	Matrix<double, Dynamic, Dynamic> weightsMatrix;
 	VectorXd biasMatrix;
