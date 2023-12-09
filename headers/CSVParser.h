@@ -9,13 +9,13 @@
 class CSVParser
 {
 private:
-    double target;
-    bool _hasHeader;
-    std::vector<double> values;
-    std::ifstream file;
+    double m_target;
+    bool m_has_header;
+    std::vector<double> m_values;
+    std::ifstream m_file;
 
 public:
-    CSVParser(std::string filename, bool hasHeader = false);
+    CSVParser(std::string filename, bool has_header = false);
     bool endOfFile();
     bool getDataFromSingleLine();
     bool getDataAt(int index);

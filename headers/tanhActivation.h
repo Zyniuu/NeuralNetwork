@@ -6,6 +6,6 @@ class TanhActivation : public NeuronActivationPart
 {
 public:
 	TanhActivation() : NeuronActivationPart(&TanhActivation::tanhFunc, &TanhActivation::tanhFuncPrime) {}
-	static VectorXd tanhFunc(VectorXd inputVals);
-	static VectorXd tanhFuncPrime(VectorXd inputVals);
+	static VectorXd tanhFunc(VectorXd input_vals);
+	static VectorXd tanhFuncPrime(VectorXd input_vals);
 };

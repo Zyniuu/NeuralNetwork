@@ -5,8 +5,9 @@
 class SoftmaxActivation : public Layer
 {
 private:
-	VectorXd outputMatrix;
+	VectorXd m_output_matrix;
+
 public:
-	VectorXd feedForward(VectorXd inputVals);
+	VectorXd feedForward(VectorXd input_vals);
 	VectorXd backPropagation(VectorXd gradient, double learning_rate);
 };

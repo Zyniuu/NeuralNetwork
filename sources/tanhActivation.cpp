@@ -1,14 +1,15 @@
 #include "../headers/tanhActivation.h"
 
 
-VectorXd TanhActivation::tanhFunc(VectorXd inputVals)
+VectorXd TanhActivation::tanhFunc(VectorXd input_vals)
 {
-	inputVals = inputVals.array().unaryExpr([](double element) { return std::tanh(element); });
-	return inputVals;
+	input_vals = input_vals.array().unaryExpr([](double element) { return std::tanh(element); });
+	return input_vals;
 }
 
-VectorXd TanhActivation::tanhFuncPrime(VectorXd inputVals)
+
+VectorXd TanhActivation::tanhFuncPrime(VectorXd input_vals)
 {
-	inputVals = inputVals.array().unaryExpr([](double element) { return 1 - std::pow(std::tanh(element), 2); });
-	return inputVals;
+	input_vals = input_vals.array().unaryExpr([](double element) { return 1 - std::pow(std::tanh(element), 2); });
+	return input_vals;
 }

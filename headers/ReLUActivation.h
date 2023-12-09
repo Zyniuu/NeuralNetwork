@@ -6,6 +6,6 @@ class ReLUActivation : public NeuronActivationPart
 {
 public:
 	ReLUActivation() : NeuronActivationPart(&ReLUActivation::reluFunc, &ReLUActivation::reluFuncPrime) {}
-	static VectorXd reluFunc(VectorXd inputVals);
-	static VectorXd reluFuncPrime(VectorXd inputVals);
+	static VectorXd reluFunc(VectorXd input_vals);
+	static VectorXd reluFuncPrime(VectorXd input_vals);
 };

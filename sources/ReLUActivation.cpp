@@ -1,14 +1,15 @@
 #include "../headers/ReLUActivation.h"
 
 
-VectorXd ReLUActivation::reluFunc(VectorXd inputVals)
+VectorXd ReLUActivation::reluFunc(VectorXd input_vals)
 {
-	inputVals = inputVals.array().unaryExpr([](double element) { return (element > 0.0) ? element : 0.0; });
-	return inputVals;
+	input_vals = input_vals.array().unaryExpr([](double element) { return (element > 0.0) ? element : 0.0; });
+	return input_vals;
 }
 
-VectorXd ReLUActivation::reluFuncPrime(VectorXd inputVals)
+
+VectorXd ReLUActivation::reluFuncPrime(VectorXd input_vals)
 {
-	inputVals = inputVals.array().unaryExpr([](double element) { return (element > 0.0) ? 1.0 : 0.0; });
-	return inputVals;
+	input_vals = input_vals.array().unaryExpr([](double element) { return (element > 0.0) ? 1.0 : 0.0; });
+	return input_vals;
 }

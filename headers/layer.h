@@ -10,9 +10,11 @@ using namespace Eigen;
 
 class Layer
 {
+protected:
+	VectorXd m_input_matrix;
+
 public:
-	VectorXd inputMatrix;
-	virtual VectorXd feedForward(VectorXd inputVals) = 0;
+	virtual VectorXd feedForward(VectorXd input_vals) = 0;
 	virtual VectorXd backPropagation(VectorXd gradient, double learning_rate) = 0;
 	virtual bool isNeuronDensePart() const { return false; }
 };

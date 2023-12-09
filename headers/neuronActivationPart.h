@@ -6,10 +6,10 @@
 class NeuronActivationPart : public Layer
 {
 protected:
-	VectorXd(*activationFunc)(VectorXd);
-	VectorXd(*activationFuncPrime)(VectorXd);
+	VectorXd(*m_activation_func)(VectorXd);
+	VectorXd(*m_activation_func_prime)(VectorXd);
 
-	NeuronActivationPart(VectorXd (*_activationFunc)(VectorXd), VectorXd (*_activationFuncPrime)(VectorXd));
-	VectorXd feedForward(VectorXd inputVals);
+	NeuronActivationPart(VectorXd (*activation_func)(VectorXd), VectorXd (*activation_func_prime)(VectorXd));
+	VectorXd feedForward(VectorXd input_vals);
 	VectorXd backPropagation(VectorXd gradient, double learning_rate);
 };
