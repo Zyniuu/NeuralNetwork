@@ -5,6 +5,7 @@
 #include "sigmoidActivation.h"
 #include "softmaxActivation.h"
 #include "CSVParser.h"
+#include "SGD.h"
 
 
 enum ActivationFunction { TANH, RELU, SIGMOID, SOFTMAX };
@@ -92,6 +93,6 @@ public:
 	VectorXd predict(std::vector<double> input_vals);
 	double meanSquaredError(VectorXd true_output, VectorXd predicted_output);
 	VectorXd meanSquaredErrorPrime(VectorXd true_output, VectorXd predicted_output);
-	void train(CSVParser& parser, int epochs, double learning_rate);
+	void train(CSVParser& parser, int epochs, const Optimizer& optimizer);
 	bool saveNetworkToFile(std::string filename);
 };

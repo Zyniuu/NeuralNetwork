@@ -9,5 +9,5 @@ private:
 
 public:
 	VectorXd feedForward(VectorXd input_vals);
-	VectorXd backPropagation(VectorXd gradient, double learning_rate);
+	VectorXd backPropagation(VectorXd gradient, const Optimizer& optimizer);
 };

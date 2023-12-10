@@ -9,7 +9,7 @@ VectorXd SoftmaxActivation::feedForward(VectorXd input_vals)
 }
 
 
-VectorXd SoftmaxActivation::backPropagation(VectorXd gradient, double learning_rate)
+VectorXd SoftmaxActivation::backPropagation(VectorXd gradient, const Optimizer& optimizer)
 {
 	int n = m_output_matrix.size();
 	Matrix<double, Dynamic, Dynamic> identity = MatrixXd::Identity(n, n);

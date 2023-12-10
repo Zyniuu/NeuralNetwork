@@ -12,7 +12,7 @@ VectorXd NeuronActivationPart::feedForward(VectorXd inputVals)
 }
 
 
-VectorXd NeuronActivationPart::backPropagation(VectorXd gradient, double learning_rate)
+VectorXd NeuronActivationPart::backPropagation(VectorXd gradient, const Optimizer& optimizer)
 {
 	return gradient.cwiseProduct(m_activation_func_prime(m_input_matrix));
 }

@@ -250,7 +250,7 @@ VectorXd NeuralNetwork::meanSquaredErrorPrime(VectorXd true_output, VectorXd pre
 }
 
 
-void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
+void NeuralNetwork::train(CSVParser& parser, int epochs, const Optimizer& optimizer)
 {
 	int numberOfSamples = parser.countLines();
 	parser.getDataFromSingleLine();
@@ -278,7 +278,7 @@ void NeuralNetwork::train(CSVParser& parser, int epochs, double learning_rate)
 			VectorXd gradient = meanSquaredErrorPrime(y, output);
 			for (auto iter = m_layers.rbegin(); iter != m_layers.rend(); ++iter)
 			{
-				gradient = (*iter)->backPropagation(gradient, learning_rate);
+				gradient = (*iter)->backPropagation(gradient, optimizer);
 			}
 		}
 		error /= numberOfSamples;
