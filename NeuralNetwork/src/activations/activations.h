@@ -1,5 +1,5 @@
 #pragma once
-#include "layers.h"
+#include "../layers/layers.h"
 
 
 namespace nn

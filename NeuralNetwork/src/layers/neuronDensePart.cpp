@@ -1,4 +1,4 @@
-#include "../headers/layers.h"
+#include "layers.h"
 
 
 namespace nn

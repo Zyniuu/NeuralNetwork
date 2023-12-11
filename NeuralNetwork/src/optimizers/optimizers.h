@@ -1,7 +1,7 @@
 #pragma once
-#include "../addons/EigenRand/EigenRand"
-#include "../addons/rapidxml/rapidxml.hpp"
-#include "../addons/rapidxml/rapidxml_print.hpp"
+#include "../../assets/EigenRand/EigenRand"
+#include "../../assets/rapidxml/rapidxml.hpp"
+#include "../../assets/rapidxml/rapidxml_print.hpp"
 #include <iostream>
 
 

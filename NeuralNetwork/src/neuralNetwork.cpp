@@ -1,4 +1,4 @@
-#include "../headers/neuralNetwork.h"
+#include "../NuralNetwork.h"
 
 
 namespace nn

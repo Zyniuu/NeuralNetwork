@@ -1,7 +1,7 @@
 #pragma once
-#include "activations.h"
-#include "optimizers.h"
-#include "CSVParser.h"
+#include "src/activations/activations.h"
+#include "src/optimizers/optimizers.h"
+#include "src/CSV/CSVParser.h"
 
 
 namespace nn {
