@@ -3,98 +3,22 @@
 
 namespace nn
 {
-	NeuralNetwork::NeuralNetwork(std::vector<unsigned>& topology, int activation_function, int output_activation_function)
-		: m_topology(topology), m_activation_function(activation_function), m_output_activation_function(output_activation_function)
+	NeuralNetwork::NeuralNetwork(std::vector<unsigned>& topology, int activation_function, int output_activation_function) : 
+		m_topology(topology),
+		m_activation_function(activation_function),
+		m_output_activation_function(output_activation_function),
+		m_min_value(),
+		m_max_value(),
+		m_input_size(topology.front()),
+		m_output_size(topology.back()),
+		m_dataset()
 	{
-		if (!m_topology.empty())
-			m_labels = m_topology.back();
-		ActivationPair activation_pair
+		if (m_topology.empty())
 		{
-			static_cast<ActivationFunction>(m_activation_function),
-			static_cast<ActivationFunction>(m_output_activation_function)
-		};
-		if (m_activation_map.find(activation_pair) != m_activation_map.end())
-		{
-			m_activation_map[activation_pair](std::vector<LayerData>());
-		}
-		else
-		{
-			std::cerr << "Error: Activation pair not found in map." << std::endl;
+			std::cerr << "ERROR: enterd topology is incorrect." << std::endl;
 			exit(EXIT_FAILURE);
 		}
-	}
-
-
-	NeuralNetwork::NeuralNetwork(std::string filename)
-	{
-		std::ifstream file(filename);
-		if (!file.is_open())
-		{
-			std::cerr << "Can't open file " << filename << std::endl;
-			exit(3);
-		}
-		std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-		buffer.push_back('\0');
-		rapidxml::xml_document<> doc;
-		doc.parse<0>(&buffer[0]);
-
-		rapidxml::xml_node<>* root = doc.first_node("NeuralNetwork");
-		if (root == nullptr)
-		{
-			std::cerr << "Incorrect file format" << std::endl;
-			exit(3);
-		}
-
-		std::vector<LayerData> layers_data;
-		rapidxml::xml_node<>* node = root->first_node();
-
-		while (node)
-		{
-			std::string node_name = node->name();
-			if (node_name == "Topology")
-			{
-				m_topology = getNodeIntValues(node);
-			}
-			else if (node_name == "ActivationFunction")
-				m_activation_function = std::stoi(node->value());
-			else if (node_name == "OutputActivationFunction")
-				m_output_activation_function = std::stoi(node->value());
-			else if (node_name == "Layers")
-			{
-				rapidxml::xml_node<>* layer_node = node->first_node("Layer");
-				std::vector<unsigned>::iterator iter = m_topology.begin();
-				for (iter; iter < m_topology.end() - 1; iter++)
-				{
-					int input_size = *iter;
-					int output_size = *(iter + 1);
-					rapidxml::xml_node<>* weights_node = layer_node->first_node("Weights");
-					VectorXd temp_vec = getNodeValues(weights_node, input_size * output_size);
-					MatrixXd weights = eigenVectorToEigenMatrix(temp_vec, output_size, input_size);
-					rapidxml::xml_node<>* bias_node = layer_node->first_node("Bias");
-					VectorXd bias = getNodeValues(bias_node, output_size);
-					layers_data.push_back({ weights, bias });
-					layer_node = layer_node->next_sibling("Layer");
-				}
-			}
-			node = node->next_sibling();
-		}
-
-		file.close();
-
-		ActivationPair activation_pair
-		{
-			static_cast<ActivationFunction>(m_activation_function),
-			static_cast<ActivationFunction>(m_output_activation_function)
-		};
-		if (m_activation_map.find(activation_pair) != m_activation_map.end())
-		{
-			m_activation_map[activation_pair](layers_data);
-		}
-		else
-		{
-			std::cerr << "Error: Activation pair not found in map." << std::endl;
-			exit(EXIT_FAILURE);
-		}
+		fillLayers();
 	}
 
 
@@ -105,6 +29,25 @@ namespace nn
 			delete layer;
 		}
 		m_layers.clear();
+		m_dataset.clear();
+	}
+
+
+	Layer* NeuralNetwork::createActivationLayer(int type)
+	{
+		switch (type)
+		{
+		case TANH:
+			return new TanhActivation();
+		case RELU:
+			return new ReLUActivation();
+		case SIGMOID:
+			return new SigmoidActivation();
+		case SOFTMAX:
+			return new SoftmaxActivation();
+		default:
+			return nullptr;
+		}
 	}
 
 
@@ -137,58 +80,32 @@ namespace nn
 	}
 
 
-	template <class T, class Z>
-	void NeuralNetwork::setActivationClasses(const std::vector<LayerData>& layers_data)
-	{
-		if (layers_data.size() <= 0)
-			fillLayers<T, Z>();
-		else
-			fillLayers<T, Z>(layers_data);
-	}
-
-
 	VectorXd NeuralNetwork::labelToEigenMatrix(int label)
 	{
-		VectorXd result = MatrixXd::Zero(m_labels, 1);
-		if (label >= 0 && label < m_labels)
+		VectorXd result = MatrixXd::Zero(m_output_size, 1);
+		if (label >= 0 && label < m_output_size)
 			result(label, 0) = 1.0;
 		return result;
 	}
 
 
-	template <class T, class Z>
 	void NeuralNetwork::fillLayers()
 	{
 		std::vector<unsigned>::iterator iter = m_topology.begin();
-		for (iter; iter < m_topology.end() - 1; iter++)
+		for (iter; iter < m_topology.end() - 1; ++iter)
 		{
 			m_layers.push_back(new NeuronDensePart(*iter, *(iter + 1)));
 			if (std::next(iter) == m_topology.end() - 1)
-				m_layers.push_back(new Z());
+				m_layers.push_back(createActivationLayer(m_output_activation_function));
 			else
-				m_layers.push_back(new T());
-		}
-	}
-
-
-	template <class T, class Z>
-	void NeuralNetwork::fillLayers(const std::vector<LayerData>& layers_data)
-	{
-		auto iter = layers_data.begin();
-		for (iter; iter < layers_data.end(); iter++)
-		{
-			m_layers.push_back(new NeuronDensePart(iter->weights, iter->bias));
-			if (std::next(iter) == layers_data.end())
-				m_layers.push_back(new Z());
-			else
-				m_layers.push_back(new T());
+				m_layers.push_back(createActivationLayer(m_activation_function));
 		}
 	}
 
 
 	VectorXd NeuralNetwork::predict(VectorXd input_vals)
 	{
-		VectorXd output = normalizeVector(input_vals);
+		VectorXd output = input_vals;
 		for (Layer* layer : m_layers)
 		{
 			output = layer->feedForward(output);
@@ -199,8 +116,8 @@ namespace nn
 
 	VectorXd NeuralNetwork::predict(std::vector<double> input_vals)
 	{
+		normalizeVector(input_vals, m_min_value, m_max_value);
 		VectorXd output = vectorToEigenMatrix(input_vals);
-		output = normalizeVector(output);
 		for (Layer* layer : m_layers)
 		{
 			output = layer->feedForward(output);
@@ -228,16 +145,6 @@ namespace nn
 	}
 
 
-	VectorXd NeuralNetwork::normalizeVector(VectorXd& vector_to_normalize)
-	{
-		m_min_input_value = vector_to_normalize.minCoeff() < m_min_input_value ? vector_to_normalize.minCoeff() : m_min_input_value;
-		m_max_input_value = vector_to_normalize.maxCoeff() > m_max_input_value ? vector_to_normalize.maxCoeff() : m_max_input_value;
-		if (m_min_input_value == m_max_input_value)
-			return vector_to_normalize;
-		return (vector_to_normalize.array() - m_min_input_value) / (m_max_input_value - m_min_input_value);
-	}
-
-
 	double NeuralNetwork::meanSquaredError(VectorXd true_output, VectorXd predicted_output)
 	{
 		VectorXd error = (true_output - predicted_output).array().square();
@@ -252,44 +159,140 @@ namespace nn
 	}
 
 
+	std::vector<double> NeuralNetwork::createVectorFromLabel(double label)
+	{
+		std::vector<double> label_vector(m_output_size);
+		std::fill(label_vector.begin(), label_vector.end(), 0);
+		label_vector[m_output_size > 1 ? label : 0] = m_output_size > 1 ? 1 : label;
+		return label_vector;
+	}
+
+
+	void NeuralNetwork::updateDataValues(const std::vector<double>& new_values, const double& new_target, double& min_value, double& max_value, std::vector<std::vector<double>>& values, std::vector<std::vector<double>>& targets)
+	{
+		values.push_back(new_values);
+		targets.push_back(createVectorFromLabel(new_target));
+		double temp_min = *std::min_element(values.back().begin(), values.back().end());
+		double temp_max = *std::max_element(values.back().begin(), values.back().end());
+
+		min_value = (temp_min < min_value) ? temp_min : min_value;
+		max_value = (temp_max > max_value) ? temp_max : max_value;
+	}
+
+
+	void NeuralNetwork::normalizeValues(std::vector<std::vector<double>>& values, const double& min_value, const double& max_value)
+	{
+		if ((min_value == max_value) || (min_value == 0 && max_value == 1))
+			return;
+
+		for (auto iter = values.begin(); iter < values.end(); ++iter)
+		{
+			normalizeVector(*iter, min_value, max_value);
+		}
+	}
+
+
+	void NeuralNetwork::normalizeVector(std::vector<double>& vec, double min_value, double max_value)
+	{
+		std::for_each(vec.begin(), vec.end(),
+			[min_value, max_value](double& x)
+			{
+				x = (x - min_value) / (max_value - min_value);
+			}
+		);
+	}
+
+
+	VectorXd NeuralNetwork::vectorToEigenVector(const std::vector<double>& input_vector)
+	{
+		return Map<const VectorXd>(input_vector.data(), input_vector.size());
+	}
+
+
+	void NeuralNetwork::fillDataSet(CSVParser& parser, int& num_of_samples)
+	{
+		double min_value = std::numeric_limits<double>::max(), max_value = -std::numeric_limits<double>::max();
+		std::vector<std::vector<double>> values, targets;
+
+		while (!parser.endOfFile())
+		{
+			parser.getDataFromSingleLine();
+			num_of_samples += 1;
+			updateDataValues(parser.getValues(), parser.getTarget(), min_value, max_value, values, targets);
+		}
+
+		parser.~CSVParser();
+
+		normalizeValues(values, min_value, max_value);
+
+		for (unsigned i = 0; i < values.size(); ++i)
+		{
+			Data temp;
+			temp.values = vectorToEigenVector(values[i]);
+			temp.target = vectorToEigenVector(targets[i]);
+			m_dataset.push_back(temp);
+		}
+
+		m_min_value = min_value;
+		m_max_value = max_value;
+	}
+
+
 	void NeuralNetwork::train(CSVParser& parser, int epochs, const Optimizer& optimizer)
 	{
-		int numberOfSamples = parser.countLines();
-		parser.getDataFromSingleLine();
-		VectorXd temp = vectorToEigenMatrix(parser.getValues());
-		m_max_input_value = temp.maxCoeff();
-		m_min_input_value = temp.minCoeff();
-		parser.restartFile();
+		int number_of_samples = 0;
+		fillDataSet(parser, number_of_samples);
 		for (int i = 0; i < epochs; i++)
 		{
 			double error = 0.0;
-			while (!parser.endOfFile())
+			for (auto iter = m_dataset.begin(); iter < m_dataset.end(); ++iter)
 			{
-				parser.getDataFromSingleLine();
-				VectorXd input_vals = vectorToEigenMatrix(parser.getValues());
-				VectorXd output = predict(input_vals);
-				VectorXd y;
-				if (m_topology.back() > 1)
-					y = labelToEigenMatrix((int)parser.getTarget());
-				else
-				{
-					y.resize(1);
-					y(0) = parser.getTarget();
-				}
-				error += meanSquaredError(y, output);
-				VectorXd gradient = meanSquaredErrorPrime(y, output);
+				VectorXd output = predict((*iter).values);
+				VectorXd gradient = meanSquaredErrorPrime((*iter).target, output);
+				error += meanSquaredError((*iter).target, output);
+
 				for (auto iter = m_layers.rbegin(); iter != m_layers.rend(); ++iter)
 				{
 					gradient = (*iter)->backPropagation(gradient, optimizer);
 				}
 			}
-			error /= numberOfSamples;
+			error /= number_of_samples;
 			std::cout << i + 1 << "/" << epochs << "\terror = " << error << std::endl;
 			parser.restartFile();
 		}
 	}
 
 
+	/*
+	template <class T, class Z>
+	void NeuralNetwork::setActivationClasses(const std::vector<LayerData>& layers_data)
+	{
+		if (layers_data.size() <= 0)
+			fillLayers<T, Z>();
+		else
+			fillLayers<T, Z>(layers_data);
+	}
+	*/
+
+
+	/*
+	template <class T, class Z>
+	void NeuralNetwork::fillLayers(const std::vector<LayerData>& layers_data)
+	{
+		auto iter = layers_data.begin();
+		for (iter; iter < layers_data.end(); iter++)
+		{
+			m_layers.push_back(new NeuronDensePart(iter->weights, iter->bias));
+			if (std::next(iter) == layers_data.end())
+				m_layers.push_back(new Z());
+			else
+				m_layers.push_back(new T());
+		}
+	}
+	*/
+
+
+	/*
 	bool NeuralNetwork::saveNetworkToFile(std::string filename)
 	{
 		std::cout << "Saving the neural network..." << std::endl;
@@ -381,4 +384,80 @@ namespace nn
 		std::cout << "DONE" << std::endl;
 		return true;
 	}
+	*/
+
+
+	/*
+	NeuralNetwork::NeuralNetwork(std::string filename)
+	{
+		std::ifstream file(filename);
+		if (!file.is_open())
+		{
+			std::cerr << "Can't open file " << filename << std::endl;
+			exit(3);
+		}
+		std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+		buffer.push_back('\0');
+		rapidxml::xml_document<> doc;
+		doc.parse<0>(&buffer[0]);
+
+		rapidxml::xml_node<>* root = doc.first_node("NeuralNetwork");
+		if (root == nullptr)
+		{
+			std::cerr << "Incorrect file format" << std::endl;
+			exit(3);
+		}
+
+		std::vector<LayerData> layers_data;
+		rapidxml::xml_node<>* node = root->first_node();
+
+		while (node)
+		{
+			std::string node_name = node->name();
+			if (node_name == "Topology")
+			{
+				m_topology = getNodeIntValues(node);
+			}
+			else if (node_name == "ActivationFunction")
+				m_activation_function = std::stoi(node->value());
+			else if (node_name == "OutputActivationFunction")
+				m_output_activation_function = std::stoi(node->value());
+			else if (node_name == "Layers")
+			{
+				rapidxml::xml_node<>* layer_node = node->first_node("Layer");
+				std::vector<unsigned>::iterator iter = m_topology.begin();
+				for (iter; iter < m_topology.end() - 1; iter++)
+				{
+					int input_size = *iter;
+					int output_size = *(iter + 1);
+					rapidxml::xml_node<>* weights_node = layer_node->first_node("Weights");
+					VectorXd temp_vec = getNodeValues(weights_node, input_size * output_size);
+					MatrixXd weights = eigenVectorToEigenMatrix(temp_vec, output_size, input_size);
+					rapidxml::xml_node<>* bias_node = layer_node->first_node("Bias");
+					VectorXd bias = getNodeValues(bias_node, output_size);
+					layers_data.push_back({ weights, bias });
+					layer_node = layer_node->next_sibling("Layer");
+				}
+			}
+			node = node->next_sibling();
+		}
+
+		file.close();
+
+		ActivationPair activation_pair
+		{
+			static_cast<ActivationFunction>(m_activation_function),
+			static_cast<ActivationFunction>(m_output_activation_function)
+		};
+		if (m_activation_map.find(activation_pair) != m_activation_map.end())
+		{
+			m_activation_map[activation_pair](layers_data);
+		}
+		else
+		{
+			std::cerr << "Error: Activation pair not found in map." << std::endl;
+			exit(EXIT_FAILURE);
+		}
+	}
+	*/
 }
