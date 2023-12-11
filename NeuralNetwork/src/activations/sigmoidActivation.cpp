@@ -1,4 +1,4 @@
-#include "activations.h"
+#include "Activations.h"
 
 
 namespace nn

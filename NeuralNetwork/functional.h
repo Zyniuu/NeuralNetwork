@@ -1,6 +1,6 @@
 #pragma once
-#include "src/activations/activations.h"
-#include "src/optimizers/optimizers.h"
+#include "src/activations/Activations.h"
+#include "src/optimizers/Optimizers.h"
 #include "src/CSV/CSVParser.h"
 
 

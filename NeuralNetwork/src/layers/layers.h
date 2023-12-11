@@ -1,5 +1,5 @@
 #pragma once
-#include "../optimizers/optimizers.h"
+#include "../optimizers/Optimizers.h"
 
 
 namespace nn

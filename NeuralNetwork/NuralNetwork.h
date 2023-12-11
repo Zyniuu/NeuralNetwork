@@ -1,5 +1,5 @@
 #pragma once
-#include "functional.h"
+#include "Functional.h"
 
 
 namespace nn
