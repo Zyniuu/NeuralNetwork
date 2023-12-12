@@ -2,36 +2,22 @@
 #include "src/activations/Activations.h"
 #include "src/optimizers/Optimizers.h"
 #include "src/CSV/CSVParser.h"
+#include "src/losses/Losses.h"
 #include <algorithm>
 
 
 namespace nn
 {
-	enum Activations { TANH, RELU, SIGMOID, SOFTMAX };
-
-	/*
-	struct LayerData
-	{
-		MatrixXd weights;
-		VectorXd bias;
-	};
-	*/
-
 	struct Data
 	{
 		VectorXd target;
 		VectorXd values;
 	};
 
-	struct DataSet
-	{
-		std::vector<Data> data;
-	};
-
 	class NeuralNetwork
 	{
 	private:
-		std::vector<Layer*> m_layers;
+		std::vector<layer::Layer*> m_layers;
 		std::vector<unsigned> m_topology;
 		std::vector<Data> m_dataset;
 		double m_min_value;
@@ -43,19 +29,16 @@ namespace nn
 
 	public:
 		NeuralNetwork(std::vector<unsigned>& topology, int activation_function, int output_activation_function);
-		//NeuralNetwork(std::string filename);
+		NeuralNetwork(const std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function, const double& data_min, const double& data_max, const std::vector<layer::Layer*>& layers);
 		~NeuralNetwork();
 
 		VectorXd predict(VectorXd input_vals);
 		VectorXd predict(std::vector<double> input_vals);
-		double meanSquaredError(VectorXd true_output, VectorXd predicted_output);
-		VectorXd meanSquaredErrorPrime(VectorXd true_output, VectorXd predicted_output);
-		void train(CSVParser& parser, int epochs, const Optimizer& optimizer);
-		//bool saveNetworkToFile(std::string filename);
+		void train(CSVParser& parser, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function);
+		void saveModel(const char* filename);
+		static NeuralNetwork loadModel(const char* filename);
 
 	private:
-		std::vector<unsigned> getNodeIntValues(rapidxml::xml_node<>* node);
-		VectorXd getNodeValues(rapidxml::xml_node<>* node, int num_of_values);
 		VectorXd vectorToEigenMatrix(const std::vector<double>& input_vector);
 		VectorXd labelToEigenMatrix(int label);
 		VectorXd vectorToEigenVector(const std::vector<double>& input_vector);
@@ -64,16 +47,11 @@ namespace nn
 		void updateDataValues(const std::vector<double>& new_values, const double& new_target, double& min_value, double& max_value, std::vector<std::vector<double>>& values, std::vector<std::vector<double>>& targets);
 		void normalizeValues(std::vector<std::vector<double>>& values, const double& min_value, const double& max_value);
 		void normalizeVector(std::vector<double>& vec, double min_value, double max_value);
-		void fillLayers();
+		static void fillLayers(std::vector<layer::Layer*>& layers, std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function, rapidxml::xml_node<>* layers_node = nullptr);
 
 		std::vector<double> createVectorFromLabel(double label);
-		/*
-		template <class T, class Z>
-		void fillLayers(const std::vector<LayerData>& layers_data);
-		template <class T, class Z>
-		void setActivationClasses(const std::vector<LayerData>& layers_data);
-		*/
-
-		Layer* createActivationLayer(int type);
+		static layer::Layer* createActivationLayer(int type);
+		loss::Loss* createLossFunction(int type);
+		static std::vector<unsigned> getNodeUnsignedValues(rapidxml::xml_node<>* node);
 	};
 }
