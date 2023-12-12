@@ -78,9 +78,6 @@ namespace nn
 
 			layer_node->append_node(weights);
 			layer_node->append_node(bias);
-
-			std::cout << m_weights_matrix << std::endl;
-			std::cout << m_bias_matrix << std::endl;
 		}
 
 
