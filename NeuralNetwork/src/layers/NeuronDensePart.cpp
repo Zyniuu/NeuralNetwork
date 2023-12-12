@@ -38,14 +38,14 @@ namespace nn
 		}
 
 
-		VectorXd NeuronDensePart::feedForward(VectorXd input_vals)
+		VectorXd NeuronDensePart::feedForward(const VectorXd& input_vals)
 		{
 			m_input_matrix = input_vals;
 			return m_weights_matrix * m_input_matrix + m_bias_matrix;
 		}
 
 
-		VectorXd NeuronDensePart::backPropagation(VectorXd gradient, const optimizer::Optimizer& optimizer)
+		VectorXd NeuronDensePart::backPropagation(const VectorXd& gradient, const optimizer::Optimizer& optimizer)
 		{
 			if (!m_optimizer)
 				m_optimizer = optimizer.clone(m_weights_matrix.rows(), m_weights_matrix.cols());

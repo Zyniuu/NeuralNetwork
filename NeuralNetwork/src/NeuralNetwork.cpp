@@ -1,15 +1,16 @@
 #include "../NuralNetwork.h"
+#include <chrono>
+#include <iomanip>
 
 
 namespace nn
 {
-	NeuralNetwork::NeuralNetwork(std::vector<unsigned>& topology, int activation_function, int output_activation_function) : 
+	NeuralNetwork::NeuralNetwork(const std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function) :
 		m_topology(topology),
 		m_activation_function(activation_function),
 		m_output_activation_function(output_activation_function),
 		m_min_value(),
 		m_max_value(),
-		m_input_size(topology.front()),
 		m_output_size(topology.back()),
 		m_dataset()
 	{
@@ -36,7 +37,6 @@ namespace nn
 		m_output_activation_function(output_activation_function), 
 		m_min_value(data_min), m_max_value(data_max), 
 		m_layers(std::move(layers)),
-		m_input_size(topology.front()),
 		m_output_size(topology.back())
 	{}
 
@@ -52,7 +52,7 @@ namespace nn
 	}
 
 
-	layer::Layer* NeuralNetwork::createActivationLayer(int type)
+	layer::Layer* NeuralNetwork::createActivationLayer(const int& type)
 	{
 		switch (type)
 		{
@@ -70,24 +70,17 @@ namespace nn
 	}
 
 
-	loss::Loss* NeuralNetwork::createLossFunction(int type)
+	loss::Loss* NeuralNetwork::createLossFunction(const int& type)
 	{
 		switch (type)
 		{
 		case loss::MSE:
 			return new loss::MeanSquaredError();
+		case loss::CROSS_ENTROPY:
+			return new loss::CrossEntropy();
 		default:
 			return nullptr;
 		}
-	}
-
-
-	VectorXd NeuralNetwork::labelToEigenMatrix(int label)
-	{
-		VectorXd result = MatrixXd::Zero(m_output_size, 1);
-		if (label >= 0 && label < m_output_size)
-			result(label, 0) = 1.0;
-		return result;
 	}
 
 
@@ -120,7 +113,7 @@ namespace nn
 	}
 
 
-	VectorXd NeuralNetwork::predict(VectorXd input_vals)
+	VectorXd NeuralNetwork::predict(const VectorXd& input_vals)
 	{
 		VectorXd output = input_vals;
 		for (layer::Layer* layer : m_layers)
@@ -143,17 +136,6 @@ namespace nn
 	}
 
 
-	MatrixXd NeuralNetwork::eigenVectorToEigenMatrix(const VectorXd& input_vector, int rows, int cols)
-	{
-		MatrixXd temp(cols, rows);
-		for (int i = 0; i < cols * rows; i++)
-			temp(i) = input_vector(i);
-		MatrixXd out(rows, cols);
-		out = temp.transpose();
-		return out;
-	}
-
-
 	VectorXd NeuralNetwork::vectorToEigenMatrix(const std::vector<double>& input_vector)
 	{
 		Map<const VectorXd> eigen_map(input_vector.data(), input_vector.size());
@@ -162,11 +144,11 @@ namespace nn
 	}
 
 
-	std::vector<double> NeuralNetwork::createVectorFromLabel(double label)
+	std::vector<double> NeuralNetwork::createVectorFromLabel(const unsigned& label)
 	{
 		std::vector<double> label_vector(m_output_size);
 		std::fill(label_vector.begin(), label_vector.end(), 0);
-		label_vector[m_output_size > 1 ? (unsigned)label : 0] = m_output_size > 1 ? 1 : label;
+		label_vector[m_output_size > 1 ? label : 0] = m_output_size > 1 ? 1 : label;
 		return label_vector;
 	}
 
@@ -174,7 +156,7 @@ namespace nn
 	void NeuralNetwork::updateDataValues(const std::vector<double>& new_values, const double& new_target, double& min_value, double& max_value, std::vector<std::vector<double>>& values, std::vector<std::vector<double>>& targets)
 	{
 		values.push_back(new_values);
-		targets.push_back(createVectorFromLabel(new_target));
+		targets.push_back(createVectorFromLabel((unsigned)new_target));
 		double temp_min = *std::min_element(values.back().begin(), values.back().end());
 		double temp_max = *std::max_element(values.back().begin(), values.back().end());
 
@@ -195,7 +177,7 @@ namespace nn
 	}
 
 
-	void NeuralNetwork::normalizeVector(std::vector<double>& vec, double min_value, double max_value)
+	void NeuralNetwork::normalizeVector(std::vector<double>& vec, const double& min_value, const double& max_value)
 	{
 		std::for_each(vec.begin(), vec.end(),
 			[min_value, max_value](double& x)
@@ -243,11 +225,15 @@ namespace nn
 	void NeuralNetwork::train(CSVParser& parser, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
 	{
 		int number_of_samples = 0;
+		std::cout << "Filling dataset..." << std::endl;
 		fillDataSet(parser, number_of_samples);
+		std::cout << "DONE" << std::endl;
+
 		loss::Loss* loss_func = createLossFunction(loss_function);
 		for (int i = 0; i < epochs; i++)
 		{
 			double error = 0.0;
+			auto start = std::chrono::high_resolution_clock::now();
 			for (auto iter = m_dataset.begin(); iter < m_dataset.end(); ++iter)
 			{
 				VectorXd output = predict((*iter).values);
@@ -259,8 +245,13 @@ namespace nn
 					gradient = (*iter)->backPropagation(gradient, optimizer);
 				}
 			}
+			auto end = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 			error /= number_of_samples;
-			std::cout << i + 1 << "/" << epochs << "\terror = " << error << std::endl;
+			std::cout << i + 1 << "/" << epochs << " - ";
+			std::cout << std::format("{:.2}", ((float)duration.count() / 1000)) << "s - ";
+			std::cout << std::format("{:.2}", ((float)duration.count() / (float)number_of_samples)) << "ms/step - ";
+			std::cout << "loss: " << std::format("{:.10}", error) << std::endl;
 			parser.restartFile();
 		}
 		delete loss_func;

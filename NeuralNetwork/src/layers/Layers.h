@@ -16,8 +16,8 @@ namespace nn
 			VectorXd m_input_matrix;
 
 		public:
-			virtual VectorXd feedForward(VectorXd input_vals) = 0;
-			virtual VectorXd backPropagation(VectorXd gradient, const optimizer::Optimizer& optimizer) = 0;
+			virtual VectorXd feedForward(const VectorXd& input_vals) = 0;
+			virtual VectorXd backPropagation(const VectorXd& gradient, const optimizer::Optimizer& optimizer) = 0;
 			virtual int getType() const = 0;
 		};
 
@@ -35,8 +35,8 @@ namespace nn
 			NeuronDensePart(int input_size, int output_size);
 			NeuronDensePart(const int& input_size, const int& output_size, rapidxml::xml_node<>* layer_node);
 
-			VectorXd feedForward(VectorXd input_vals);
-			VectorXd backPropagation(VectorXd gradient, const optimizer::Optimizer& optimizer);
+			VectorXd feedForward(const VectorXd& input_vals);
+			VectorXd backPropagation(const VectorXd& gradient, const optimizer::Optimizer& optimizer);
 			int getType() const { return DENSE; }
 			void saveLayer(rapidxml::xml_document<>* document, rapidxml::xml_node<>* layer_node);
 
@@ -55,8 +55,8 @@ namespace nn
 			VectorXd(*m_activation_func_prime)(VectorXd);
 
 			NeuronActivationPart(VectorXd(*activation_func)(VectorXd), VectorXd(*activation_func_prime)(VectorXd));
-			VectorXd feedForward(VectorXd input_vals);
-			VectorXd backPropagation(VectorXd gradient, const optimizer::Optimizer& optimizer);
+			VectorXd feedForward(const VectorXd& input_vals);
+			VectorXd backPropagation(const VectorXd& gradient, const optimizer::Optimizer& optimizer);
 			int getType() const { return ACTIVATION; }
 		};
 	}

@@ -41,8 +41,8 @@ namespace nn
 			VectorXd m_output_matrix;
 
 		public:
-			VectorXd feedForward(VectorXd input_vals);
-			VectorXd backPropagation(VectorXd gradient, const optimizer::Optimizer& optimizer);
+			VectorXd feedForward(const VectorXd& input_vals);
+			VectorXd backPropagation(const VectorXd& gradient, const optimizer::Optimizer& optimizer);
 			int getType() const { return layer::ACTIVATION; }
 		};
 	}
