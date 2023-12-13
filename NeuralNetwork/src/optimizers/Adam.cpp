@@ -33,7 +33,7 @@ namespace nn
 			MatrixXd m_weights_first_momentum_hat = m_weights_first_momentum / (1 - std::pow(m_beta1, m_t_weights));
 			MatrixXd m_weights_second_momentum_hat = m_weights_second_momentum / (1 - std::pow(m_beta2, m_t_weights));
 			m_t_weights += 1;
-			return m_learning_rate * m_weights_first_momentum_hat.array() / (m_weights_second_momentum_hat.array().sqrt() + m_epsilon);
+			return (m_learning_rate * m_weights_first_momentum_hat.array() / (m_weights_second_momentum_hat.array().sqrt() + m_epsilon)).matrix() * input_vector.transpose();
 		}
 
 

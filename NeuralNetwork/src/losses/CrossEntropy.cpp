@@ -17,7 +17,6 @@ namespace nn
 		VectorXd CrossEntropy::calcLossPrime(const VectorXd& true_output, const VectorXd& predicted_output)
 		{
 			VectorXd out = -true_output.array() / (predicted_output.array() + 1e-15);
-			//VectorXd out = predicted_output - true_output;
 			return out;
 		}
 	}
