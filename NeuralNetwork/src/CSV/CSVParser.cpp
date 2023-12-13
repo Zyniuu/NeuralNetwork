@@ -28,6 +28,7 @@ namespace nn
         {
             m_file.close();
         }
+        m_values.clear();
     }
 
 

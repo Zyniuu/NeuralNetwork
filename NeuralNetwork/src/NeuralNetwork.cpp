@@ -36,7 +36,7 @@ namespace nn
 		m_activation_function(activation_function), 
 		m_output_activation_function(output_activation_function), 
 		m_min_value(data_min), m_max_value(data_max), 
-		m_layers(std::move(layers)),
+		m_layers(layers),
 		m_output_size(topology.back())
 	{}
 
@@ -78,6 +78,8 @@ namespace nn
 			return new loss::MeanSquaredError();
 		case loss::CROSS_ENTROPY:
 			return new loss::CrossEntropy();
+		case loss::QUADRATIC:
+			return new loss::Quadratic();
 		default:
 			return nullptr;
 		}
@@ -206,7 +208,6 @@ namespace nn
 			updateDataValues(parser.getValues(), parser.getTarget(), min_value, max_value, values, targets);
 		}
 
-		parser.~CSVParser();
 		normalizeValues(values, min_value, max_value);
 
 		for (unsigned i = 0; i < values.size(); ++i)
@@ -273,34 +274,34 @@ namespace nn
 
 	void NeuralNetwork::saveModel(const char* filename)
 	{
-		rapidxml::xml_document<> document;
-		rapidxml::xml_node<>* root = document.allocate_node(rapidxml::node_element, "NeuralNetwork");
-		rapidxml::xml_node<>* topology = document.allocate_node(rapidxml::node_element, "Topology");
-		rapidxml::xml_node<>* activation_function = document.allocate_node(rapidxml::node_element, "ActivationFunction");
-		rapidxml::xml_node<>* out_activation_function = document.allocate_node(rapidxml::node_element, "OutputActivationFunction");
-		rapidxml::xml_node<>* data_min_value = document.allocate_node(rapidxml::node_element, "DataMin");
-		rapidxml::xml_node<>* data_max_value = document.allocate_node(rapidxml::node_element, "DataMax");
-		rapidxml::xml_node<>* layers = document.allocate_node(rapidxml::node_element, "Layers");
+		std::unique_ptr<rapidxml::xml_document<>> document(new rapidxml::xml_document<>());
+		rapidxml::xml_node<>* root = document->allocate_node(rapidxml::node_element, "NeuralNetwork");
+		rapidxml::xml_node<>* topology = document->allocate_node(rapidxml::node_element, "Topology");
+		rapidxml::xml_node<>* activation_function = document->allocate_node(rapidxml::node_element, "ActivationFunction");
+		rapidxml::xml_node<>* out_activation_function = document->allocate_node(rapidxml::node_element, "OutputActivationFunction");
+		rapidxml::xml_node<>* data_min_value = document->allocate_node(rapidxml::node_element, "DataMin");
+		rapidxml::xml_node<>* data_max_value = document->allocate_node(rapidxml::node_element, "DataMax");
+		rapidxml::xml_node<>* layers = document->allocate_node(rapidxml::node_element, "Layers");
 
 		for (auto iter = m_topology.begin(); iter < m_topology.end(); ++iter)
 		{
-			rapidxml::xml_node<>* val = document.allocate_node(rapidxml::node_element, "Value");
-			val->value(document.allocate_string(std::to_string(*iter).c_str()));
+			rapidxml::xml_node<>* val = document->allocate_node(rapidxml::node_element, "Value");
+			val->value(document->allocate_string(std::to_string(*iter).c_str()));
 			topology->append_node(val);
 		}
 
-		activation_function->value(document.allocate_string(std::to_string(m_activation_function).c_str()));
-		out_activation_function->value(document.allocate_string(std::to_string(m_output_activation_function).c_str()));
-		data_min_value->value(document.allocate_string(std::to_string(m_min_value).c_str()));
-		data_max_value->value(document.allocate_string(std::to_string(m_max_value).c_str()));
+		activation_function->value(document->allocate_string(std::to_string(m_activation_function).c_str()));
+		out_activation_function->value(document->allocate_string(std::to_string(m_output_activation_function).c_str()));
+		data_min_value->value(document->allocate_string(std::to_string(m_min_value).c_str()));
+		data_max_value->value(document->allocate_string(std::to_string(m_max_value).c_str()));
 
 		for (layer::Layer* _layer : m_layers)
 		{
 			if (_layer->getType() == layer::DENSE)
 			{
 				layer::NeuronDensePart* dense = dynamic_cast<layer::NeuronDensePart*>(_layer);
-				rapidxml::xml_node<>* layer_node = document.allocate_node(rapidxml::node_element, "Layer");
-				dense->saveLayer(&document, layer_node);
+				rapidxml::xml_node<>* layer_node = document->allocate_node(rapidxml::node_element, "Layer");
+				dense->saveLayer(document.get(), layer_node);
 				layers->append_node(layer_node);
 			}
 		}
@@ -311,12 +312,11 @@ namespace nn
 		root->append_node(data_min_value);
 		root->append_node(data_max_value);
 		root->append_node(layers);
-		document.append_node(root);
+		document->append_node(root);
 
 		std::ofstream file(filename);
-		file << document;
+		file << *document;
 		file.close();
-		document.clear();
 	}
 
 
@@ -336,10 +336,10 @@ namespace nn
 
 		std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 		buffer.push_back('\0');
-		rapidxml::xml_document<> document;
-		document.parse<0>(&buffer[0]);
+		std::unique_ptr<rapidxml::xml_document<>> document(new rapidxml::xml_document<>());
+		document->parse<0>(&buffer[0]);
 
-		rapidxml::xml_node<>* root = document.first_node("NeuralNetwork");
+		rapidxml::xml_node<>* root = document->first_node("NeuralNetwork");
 		rapidxml::xml_node<>* topology = root->first_node("Topology");
 		rapidxml::xml_node<>* activation_function = topology->next_sibling("ActivationFunction");
 		rapidxml::xml_node<>* out_activation_function = activation_function->next_sibling("OutputActivationFunction");
@@ -353,6 +353,8 @@ namespace nn
 		data_min = std::stod(data_min_value->value());
 		data_max = std::stod(data_max_value->value());
 		fillLayers(_layers, _topology, activation, out_activation, layers);
+
+		file.close();
 
 		return NeuralNetwork(_topology, activation, out_activation, data_min, data_max, _layers);
 	}

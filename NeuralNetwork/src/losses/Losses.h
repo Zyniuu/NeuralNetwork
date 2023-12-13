@@ -8,7 +8,7 @@ namespace nn
 {
 	namespace loss
 	{
-		enum { MSE, CROSS_ENTROPY };
+		enum { MSE, CROSS_ENTROPY, QUADRATIC };
 
 		class Loss
 		{
@@ -27,6 +27,14 @@ namespace nn
 
 
 		class CrossEntropy : public Loss
+		{
+		public:
+			double calcLoss(const VectorXd& true_output, const VectorXd& predicted_output);
+			VectorXd calcLossPrime(const VectorXd& true_output, const VectorXd& predicted_output);
+		};
+
+
+		class Quadratic : public Loss
 		{
 		public:
 			double calcLoss(const VectorXd& true_output, const VectorXd& predicted_output);
