@@ -1,6 +1,7 @@
 #include "../NuralNetwork.h"
 #include <chrono>
 #include <iomanip>
+#include <algorithm>
 
 
 namespace nn
@@ -223,29 +224,49 @@ namespace nn
 	}
 
 
-	void NeuralNetwork::train(CSVParser& parser, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
+	void NeuralNetwork::shuffleDataSet(std::vector<Data>& dataset, std::default_random_engine& random_engine)
+	{
+		random_engine.seed((unsigned)std::chrono::system_clock::now().time_since_epoch().count());
+		std::shuffle(dataset.begin(), dataset.end(), random_engine);
+	}
+
+
+	void NeuralNetwork::trainOnBatch(const std::vector<Data>& batch, double& error, loss::Loss* loss_func, const optimizer::Optimizer& optimizer)
+	{
+		for (auto iter = batch.begin(); iter < batch.end(); ++iter)
+		{
+			VectorXd output = predict((*iter).values);
+			VectorXd gradient = loss_func->calcLossPrime((*iter).target, output);
+			error += loss_func->calcLoss((*iter).target, output);
+
+			for (auto iter = m_layers.rbegin(); iter != m_layers.rend(); ++iter)
+			{
+				gradient = (*iter)->backPropagation(gradient, optimizer);
+			}
+		}
+	}
+
+
+	void NeuralNetwork::train(CSVParser& parser, const int& batch_size, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
 	{
 		int number_of_samples = 0;
 		std::cout << "Filling dataset..." << std::endl;
 		fillDataSet(parser, number_of_samples);
 		std::cout << "DONE" << std::endl;
-
 		loss::Loss* loss_func = createLossFunction(loss_function);
+		auto rng = std::default_random_engine{};
 		for (int i = 0; i < epochs; i++)
 		{
+			shuffleDataSet(m_dataset, rng);
 			double error = 0.0;
 			auto start = std::chrono::high_resolution_clock::now();
-			for (auto iter = m_dataset.begin(); iter < m_dataset.end(); ++iter)
-			{
-				VectorXd output = predict((*iter).values);
-				VectorXd gradient = loss_func->calcLossPrime((*iter).target, output);
-				error += loss_func->calcLoss((*iter).target, output);
 
-				for (auto iter = m_layers.rbegin(); iter != m_layers.rend(); ++iter)
-				{
-					gradient = (*iter)->backPropagation(gradient, optimizer);
-				}
+			for (unsigned batch_num = 0; batch_num < m_dataset.size(); batch_num += batch_size)
+			{
+				std::vector<Data> batch(m_dataset.begin() + batch_num, std::min(m_dataset.begin() + batch_num + batch_size, m_dataset.end()));
+				trainOnBatch(batch, error, loss_func, optimizer);
 			}
+
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 			error /= number_of_samples;
