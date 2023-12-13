@@ -247,34 +247,91 @@ namespace nn
 	}
 
 
-	void NeuralNetwork::train(CSVParser& parser, const int& batch_size, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
+	unsigned NeuralNetwork::argmax(const VectorXd& vec)
+	{
+		double max_val = vec.maxCoeff();
+		for (unsigned i = 0; i < vec.size(); ++i)
+		{
+			if (vec(i) == max_val)
+				return i;
+		}
+		return -1;
+	}
+
+
+	double NeuralNetwork::evaluate(std::vector<Data>& test_vector)
+	{
+		double total_tests = 0;
+		double succ_tests = 0;
+
+		for (auto iter = test_vector.begin(); iter < test_vector.end(); ++iter)
+		{
+			++total_tests;
+			VectorXd output = predict((*iter).values);
+			if (argmax(output) == argmax((*iter).target))
+				++succ_tests;
+		}
+		if (total_tests == 0.0)
+			return 0.0;
+		return succ_tests / total_tests;
+	}
+
+
+	void NeuralNetwork::showDebuggingData(const int& epoch, const int& max_epoch, const double& duration_s, const double& duration_ms, const double& error, const double& accuracy)
+	{
+		std::cout << epoch << "/" << max_epoch << " - ";
+		std::cout << std::format("{:.2}", duration_s) << "s - ";
+		std::cout << std::format("{:.2}", duration_ms) << "ms/step - ";
+		std::cout << "loss: " << std::format("{:.10}", error);
+		if (accuracy > 0)
+		{
+			std::cout << " - accuracy: " << std::format("{:.10}", accuracy);
+		}
+		std::cout << std::endl;
+	}
+
+
+	void NeuralNetwork::train(CSVParser& parser, const int& batch_size, const double& validation_split, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
 	{
 		int number_of_samples = 0;
 		std::cout << "Filling dataset..." << std::endl;
+		auto rng = std::default_random_engine{};
 		fillDataSet(parser, number_of_samples);
+		shuffleDataSet(m_dataset, rng);
 		std::cout << "DONE" << std::endl;
 		loss::Loss* loss_func = createLossFunction(loss_function);
-		auto rng = std::default_random_engine{};
+		size_t training_size = m_dataset.size() - static_cast<size_t>(validation_split * m_dataset.size());
+		std::vector<Data> training_data(m_dataset.begin(), m_dataset.begin() + training_size);
+		std::vector<Data> test_data(m_dataset.begin() + training_size, m_dataset.end());
+
 		for (int i = 0; i < epochs; i++)
 		{
-			shuffleDataSet(m_dataset, rng);
+			shuffleDataSet(training_data, rng);
 			double error = 0.0;
+			double accuracy = 0.0;
 			auto start = std::chrono::high_resolution_clock::now();
 
-			for (unsigned batch_num = 0; batch_num < m_dataset.size(); batch_num += batch_size)
+			for (unsigned batch_num = 0; batch_num < training_data.size(); batch_num += batch_size)
 			{
-				std::vector<Data> batch(m_dataset.begin() + batch_num, std::min(m_dataset.begin() + batch_num + batch_size, m_dataset.end()));
+				std::vector<Data> batch(training_data.begin() + batch_num, std::min(training_data.begin() + batch_num + batch_size, training_data.end()));
 				trainOnBatch(batch, error, loss_func, optimizer);
 			}
 
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 			error /= number_of_samples;
-			std::cout << i + 1 << "/" << epochs << " - ";
-			std::cout << std::format("{:.2}", ((float)duration.count() / 1000)) << "s - ";
-			std::cout << std::format("{:.2}", ((float)duration.count() / (float)number_of_samples)) << "ms/step - ";
-			std::cout << "loss: " << std::format("{:.10}", error) << std::endl;
-			parser.restartFile();
+
+			if (validation_split > 0)
+				accuracy = evaluate(test_data);
+
+			showDebuggingData(
+				i + 1, 
+				epochs, 
+				((double)duration.count() / 1000), 
+				((double)duration.count() / (double)number_of_samples), 
+				error, 
+				accuracy
+			);
 		}
 		delete loss_func;
 	}
