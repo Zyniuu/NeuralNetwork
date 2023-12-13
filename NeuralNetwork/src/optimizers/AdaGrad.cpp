@@ -9,8 +9,12 @@ namespace nn
 			: Optimizer(learning_rate), m_initial_accumulator(initial_accumulator), m_epsilon(epsilon) {}
 
 
-		AdaGrad::AdaGrad(const AdaGrad& other, const int& weights_matrix_rows, const int& weights_matrix_cols)
-			: Optimizer(other), m_initial_accumulator(other.m_initial_accumulator), m_epsilon(other.m_epsilon), m_accumulated_weights(other.m_accumulated_weights), m_accumulated_bias(other.m_accumulated_bias)
+		AdaGrad::AdaGrad(const AdaGrad& other, const int& weights_matrix_rows, const int& weights_matrix_cols) : 
+			Optimizer(other), 
+			m_initial_accumulator(other.m_initial_accumulator), 
+			m_epsilon(other.m_epsilon), 
+			m_accumulated_weights(other.m_accumulated_weights), 
+			m_accumulated_bias(other.m_accumulated_bias)
 		{
 			m_accumulated_weights = MatrixXd::Constant(weights_matrix_rows, weights_matrix_cols, m_initial_accumulator);
 			m_accumulated_bias = VectorXd::Constant(weights_matrix_rows, m_initial_accumulator);
