@@ -13,11 +13,14 @@ namespace nn
     private:
         double m_target;
         bool m_has_header;
+        bool m_is_target_first;
+        char m_separator;
+        int m_start_column_index;
         std::vector<double> m_values;
         std::ifstream m_file;
 
     public:
-        CSVParser(std::string filename, bool has_header = false);
+        CSVParser(std::string filename, char separator, int start_column_index = 0, bool has_header = false, bool is_target_first = true);
         bool endOfFile();
         bool getDataFromSingleLine();
         bool getDataAt(int index);

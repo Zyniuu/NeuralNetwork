@@ -26,34 +26,62 @@ namespace nn
 		int m_output_activation_function;
 
 	public:
-		NeuralNetwork(const std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function);
-		NeuralNetwork(const std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function, const double& data_min, const double& data_max, const std::vector<layer::Layer*>& layers);
+		NeuralNetwork(
+			const std::vector<unsigned>& topology, 
+			const int& activation_function, 
+			const int& output_activation_function, 
+			const int& hidden_layer_initializer, 
+			const int& output_layer_initializer
+		);
+		NeuralNetwork(
+			const std::vector<unsigned>& topology, 
+			const int& activation_function, 
+			const int& output_activation_function, 
+			const double& data_min, 
+			const double& data_max, 
+			const std::vector<layer::Layer*>& layers
+		);
 		~NeuralNetwork();
 
 		VectorXd predict(const VectorXd& input_vals);
 		VectorXd predict(std::vector<double> input_vals);
-		void train(CSVParser& parser, const int& batch_size, const double& validation_split, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function);
+		void train(
+			std::vector<Data>& dataset, 
+			const int& batch_size, 
+			const double& validation_split, 
+			const int& epochs,
+			const optimizer::Optimizer& optimizer, 
+			const int& loss_function
+		);
+		double evaluate(std::vector<Data>& dataset);
 		void saveModel(const char* filename);
 
 		static NeuralNetwork loadModel(const char* filename);
 
 	private:
 		VectorXd vectorToEigenMatrix(const std::vector<double>& input_vector);
-		VectorXd vectorToEigenVector(const std::vector<double>& input_vector);
-		void fillDataSet(CSVParser& parser, int& num_of_samples);
-		void updateDataValues(const std::vector<double>& new_values, const double& new_target, double& min_value, double& max_value, std::vector<std::vector<double>>& values, std::vector<std::vector<double>>& targets);
-		void normalizeValues(std::vector<std::vector<double>>& values, const double& min_value, const double& max_value);
-		void normalizeVector(std::vector<double>& vec, const double& min_value, const double& max_value);
 		void trainOnBatch(const std::vector<Data>& batch, double& error, loss::Loss* loss_func, const optimizer::Optimizer& optimizer);
-		std::vector<double> createVectorFromLabel(const unsigned& label);
 		void shuffleDataSet(std::vector<Data>& dataset, std::default_random_engine& random_engine);
 		loss::Loss* createLossFunction(const int& type);
-		double evaluate(std::vector<Data>& test_vector);
 
-		static void showDebuggingData(const int& epoch, const int& max_epoch, const double& duration_s, const double& duration_ms, const double& error, const double& accuracy);
-		static unsigned argmax(const VectorXd& vec);
+		static void showDebuggingData(
+			const int& epoch, 
+			const int& max_epoch, 
+			const double& duration_s, 
+			const double& duration_ms, 
+			const double& error, 
+			const double& accuracy
+		);
 		static std::vector<unsigned> getNodeUnsignedValues(rapidxml::xml_node<>* node);
 		static layer::Layer* createActivationLayer(const int& type);
-		static void fillLayers(std::vector<layer::Layer*>& layers, std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function, rapidxml::xml_node<>* layers_node = nullptr);
+		static void fillLayers(
+			std::vector<layer::Layer*>& layers, 
+			std::vector<unsigned>& topology, 
+			const int& activation_function, 
+			const int& output_activation_function, 
+			const int& hidden_layer_initializer, 
+			const int& output_layer_initializer, 
+			rapidxml::xml_node<>* layers_node = nullptr
+		);
 	};
 }

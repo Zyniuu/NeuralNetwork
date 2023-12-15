@@ -6,7 +6,13 @@
 
 namespace nn
 {
-	NeuralNetwork::NeuralNetwork(const std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function) :
+	NeuralNetwork::NeuralNetwork(
+		const std::vector<unsigned>& topology, 
+		const int& activation_function, 
+		const int& output_activation_function, 
+		const int& hidden_layer_initializer, 
+		const int& output_layer_initializer
+	) :
 		m_topology(topology),
 		m_activation_function(activation_function),
 		m_output_activation_function(output_activation_function),
@@ -20,7 +26,14 @@ namespace nn
 			std::cerr << "ERROR: enterd topology is incorrect." << std::endl;
 			exit(EXIT_FAILURE);
 		}
-		fillLayers(m_layers, m_topology, m_activation_function, m_output_activation_function);
+		fillLayers(
+			m_layers, 
+			m_topology, 
+			m_activation_function, 
+			m_output_activation_function, 
+			hidden_layer_initializer, 
+			output_layer_initializer
+		);
 	}
 
 
@@ -79,6 +92,8 @@ namespace nn
 			return new loss::MeanSquaredError();
 		case loss::CROSS_ENTROPY:
 			return new loss::CrossEntropy();
+		case loss::BINARY_CROSS_ENTROPY:
+			return new loss::BinaryCrossEntropy();
 		case loss::QUADRATIC:
 			return new loss::Quadratic();
 		default:
@@ -87,18 +102,23 @@ namespace nn
 	}
 
 
-	void NeuralNetwork::fillLayers(std::vector<layer::Layer*>& layers, std::vector<unsigned>& topology, const int& activation_function, const int& output_activation_function, rapidxml::xml_node<>* layers_node)
+	void NeuralNetwork::fillLayers
+	(
+		std::vector<layer::Layer*>& layers, 
+		std::vector<unsigned>& topology, 
+		const int& activation_function, 
+		const int& output_activation_function, 
+		const int& hidden_layer_initializer, 
+		const int& output_layer_initializer, 
+		rapidxml::xml_node<>* layers_node
+	)
 	{
 		rapidxml::xml_node<>* layer_node = nullptr;
 		if (layers_node)
 			layer_node = layers_node->first_node("Layer");
 		for (auto iter = topology.begin(); iter < topology.end() - 1; ++iter)
 		{
-			if (!layer_node)
-			{
-				layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1)));
-			}
-			else
+			if (layer_node)
 			{
 				layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), layer_node));
 				layer_node = layer_node->next_sibling("Layer");
@@ -106,10 +126,14 @@ namespace nn
 
 			if (std::next(iter) == topology.end() - 1)
 			{
+				if (!layer_node)
+					layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), output_layer_initializer));
 				layers.push_back(createActivationLayer(output_activation_function));
 			}
 			else
 			{
+				if (!layer_node)
+					layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), hidden_layer_initializer));
 				layers.push_back(createActivationLayer(activation_function));
 			}
 		}
@@ -129,7 +153,6 @@ namespace nn
 
 	VectorXd NeuralNetwork::predict(std::vector<double> input_vals)
 	{
-		normalizeVector(input_vals, m_min_value, m_max_value);
 		VectorXd output = vectorToEigenMatrix(input_vals);
 		for (layer::Layer* layer : m_layers)
 		{
@@ -144,83 +167,6 @@ namespace nn
 		Map<const VectorXd> eigen_map(input_vector.data(), input_vector.size());
 		VectorXd eigen_matrix = eigen_map;
 		return eigen_matrix;
-	}
-
-
-	std::vector<double> NeuralNetwork::createVectorFromLabel(const unsigned& label)
-	{
-		std::vector<double> label_vector(m_output_size);
-		std::fill(label_vector.begin(), label_vector.end(), 0);
-		label_vector[m_output_size > 1 ? label : 0] = m_output_size > 1 ? 1 : label;
-		return label_vector;
-	}
-
-
-	void NeuralNetwork::updateDataValues(const std::vector<double>& new_values, const double& new_target, double& min_value, double& max_value, std::vector<std::vector<double>>& values, std::vector<std::vector<double>>& targets)
-	{
-		values.push_back(new_values);
-		targets.push_back(createVectorFromLabel((unsigned)new_target));
-		double temp_min = *std::min_element(values.back().begin(), values.back().end());
-		double temp_max = *std::max_element(values.back().begin(), values.back().end());
-
-		min_value = (temp_min < min_value) ? temp_min : min_value;
-		max_value = (temp_max > max_value) ? temp_max : max_value;
-	}
-
-
-	void NeuralNetwork::normalizeValues(std::vector<std::vector<double>>& values, const double& min_value, const double& max_value)
-	{
-		if ((min_value == max_value) || (min_value == 0 && max_value == 1))
-			return;
-
-		for (auto iter = values.begin(); iter < values.end(); ++iter)
-		{
-			normalizeVector(*iter, min_value, max_value);
-		}
-	}
-
-
-	void NeuralNetwork::normalizeVector(std::vector<double>& vec, const double& min_value, const double& max_value)
-	{
-		std::for_each(vec.begin(), vec.end(),
-			[min_value, max_value](double& x)
-			{
-				x = (x - min_value) / (max_value - min_value);
-			}
-		);
-	}
-
-
-	VectorXd NeuralNetwork::vectorToEigenVector(const std::vector<double>& input_vector)
-	{
-		return Map<const VectorXd>(input_vector.data(), input_vector.size());
-	}
-
-
-	void NeuralNetwork::fillDataSet(CSVParser& parser, int& num_of_samples)
-	{
-		double min_value = std::numeric_limits<double>::max(), max_value = -std::numeric_limits<double>::max();
-		std::vector<std::vector<double>> values, targets;
-
-		while (!parser.endOfFile())
-		{
-			parser.getDataFromSingleLine();
-			num_of_samples += 1;
-			updateDataValues(parser.getValues(), parser.getTarget(), min_value, max_value, values, targets);
-		}
-
-		normalizeValues(values, min_value, max_value);
-
-		for (unsigned i = 0; i < values.size(); ++i)
-		{
-			Data temp;
-			temp.values = vectorToEigenVector(values[i]);
-			temp.target = vectorToEigenVector(targets[i]);
-			m_dataset.push_back(temp);
-		}
-
-		m_min_value = min_value;
-		m_max_value = max_value;
 	}
 
 
@@ -247,37 +193,15 @@ namespace nn
 	}
 
 
-	unsigned NeuralNetwork::argmax(const VectorXd& vec)
-	{
-		double max_val = vec.maxCoeff();
-		for (unsigned i = 0; i < vec.size(); ++i)
-		{
-			if (vec(i) == max_val)
-				return i;
-		}
-		return -1;
-	}
-
-
-	double NeuralNetwork::evaluate(std::vector<Data>& test_vector)
-	{
-		double total_tests = 0;
-		double succ_tests = 0;
-
-		for (auto iter = test_vector.begin(); iter < test_vector.end(); ++iter)
-		{
-			++total_tests;
-			VectorXd output = predict((*iter).values);
-			if (argmax(output) == argmax((*iter).target))
-				++succ_tests;
-		}
-		if (total_tests == 0.0)
-			return 0.0;
-		return succ_tests / total_tests;
-	}
-
-
-	void NeuralNetwork::showDebuggingData(const int& epoch, const int& max_epoch, const double& duration_s, const double& duration_ms, const double& error, const double& accuracy)
+	void NeuralNetwork::showDebuggingData
+	(
+		const int& epoch, 
+		const int& max_epoch, 
+		const double& duration_s, 
+		const double& duration_ms, 
+		const double& error, 
+		const double& accuracy
+	)
 	{
 		std::cout << epoch << "/" << max_epoch << " - ";
 		std::cout << std::format("{:.2}", duration_s) << "s - ";
@@ -291,18 +215,53 @@ namespace nn
 	}
 
 
-	void NeuralNetwork::train(CSVParser& parser, const int& batch_size, const double& validation_split, const int& epochs, const optimizer::Optimizer& optimizer, const int& loss_function)
+	double NeuralNetwork::evaluate(std::vector<Data>& dataset)
 	{
-		int number_of_samples = 0;
-		std::cout << "Filling dataset..." << std::endl;
+		int correctPredictions = 0;
+		
+		for (const auto& sample : dataset) 
+		{
+			Eigen::VectorXd predicted = predict(sample.values);
+
+			if (predicted.size() > 1)
+			{
+				Eigen::Index predicted_class_index;
+				predicted.maxCoeff(&predicted_class_index);
+
+				Eigen::Index actual_class_index;
+				sample.target.maxCoeff(&actual_class_index);
+
+				if (predicted_class_index == actual_class_index)
+					correctPredictions++;
+			}
+			else
+			{
+				int predictedClass = (predicted(0) > 0.5) ? 1 : 0;
+				if (predictedClass == sample.target(0))
+					correctPredictions++;
+			}
+		}
+
+		return static_cast<double>(correctPredictions) / dataset.size();
+	}
+
+
+	void NeuralNetwork::train
+	(
+		std::vector<Data>& dataset, 
+		const int& batch_size, 
+		const double& validation_split, 
+		const int& epochs, 
+		const optimizer::Optimizer& optimizer, 
+		const int& loss_function
+	)
+	{
 		auto rng = std::default_random_engine{};
-		fillDataSet(parser, number_of_samples);
-		shuffleDataSet(m_dataset, rng);
-		std::cout << "DONE" << std::endl;
+		shuffleDataSet(dataset, rng);
 		loss::Loss* loss_func = createLossFunction(loss_function);
-		size_t training_size = m_dataset.size() - static_cast<size_t>(validation_split * m_dataset.size());
-		std::vector<Data> training_data(m_dataset.begin(), m_dataset.begin() + training_size);
-		std::vector<Data> test_data(m_dataset.begin() + training_size, m_dataset.end());
+		size_t training_size = dataset.size() - static_cast<size_t>(validation_split * dataset.size());
+		std::vector<Data> training_data(dataset.begin(), dataset.begin() + training_size);
+		std::vector<Data> test_data(dataset.begin() + training_size, dataset.end());
 
 		for (int i = 0; i < epochs; i++)
 		{
@@ -313,13 +272,17 @@ namespace nn
 
 			for (unsigned batch_num = 0; batch_num < training_data.size(); batch_num += batch_size)
 			{
-				std::vector<Data> batch(training_data.begin() + batch_num, std::min(training_data.begin() + batch_num + batch_size, training_data.end()));
+				std::vector<Data> batch(
+					training_data.begin() + batch_num, 
+					std::min(training_data.begin() + batch_num + batch_size, 
+					training_data.end())
+				);
 				trainOnBatch(batch, error, loss_func, optimizer);
 			}
 
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-			error /= number_of_samples;
+			error /= dataset.size();
 
 			if (validation_split > 0)
 				accuracy = evaluate(test_data);
@@ -328,7 +291,7 @@ namespace nn
 				i + 1, 
 				epochs, 
 				((double)duration.count() / 1000), 
-				((double)duration.count() / (double)number_of_samples), 
+				((double)duration.count() / (double)dataset.size()),
 				error, 
 				accuracy
 			);
@@ -357,8 +320,6 @@ namespace nn
 		rapidxml::xml_node<>* topology = document->allocate_node(rapidxml::node_element, "Topology");
 		rapidxml::xml_node<>* activation_function = document->allocate_node(rapidxml::node_element, "ActivationFunction");
 		rapidxml::xml_node<>* out_activation_function = document->allocate_node(rapidxml::node_element, "OutputActivationFunction");
-		rapidxml::xml_node<>* data_min_value = document->allocate_node(rapidxml::node_element, "DataMin");
-		rapidxml::xml_node<>* data_max_value = document->allocate_node(rapidxml::node_element, "DataMax");
 		rapidxml::xml_node<>* layers = document->allocate_node(rapidxml::node_element, "Layers");
 
 		for (auto iter = m_topology.begin(); iter < m_topology.end(); ++iter)
@@ -370,8 +331,6 @@ namespace nn
 
 		activation_function->value(document->allocate_string(std::to_string(m_activation_function).c_str()));
 		out_activation_function->value(document->allocate_string(std::to_string(m_output_activation_function).c_str()));
-		data_min_value->value(document->allocate_string(std::to_string(m_min_value).c_str()));
-		data_max_value->value(document->allocate_string(std::to_string(m_max_value).c_str()));
 
 		for (layer::Layer* _layer : m_layers)
 		{
@@ -387,8 +346,6 @@ namespace nn
 		root->append_node(topology);
 		root->append_node(activation_function);
 		root->append_node(out_activation_function);
-		root->append_node(data_min_value);
-		root->append_node(data_max_value);
 		root->append_node(layers);
 		document->append_node(root);
 
@@ -421,16 +378,20 @@ namespace nn
 		rapidxml::xml_node<>* topology = root->first_node("Topology");
 		rapidxml::xml_node<>* activation_function = topology->next_sibling("ActivationFunction");
 		rapidxml::xml_node<>* out_activation_function = activation_function->next_sibling("OutputActivationFunction");
-		rapidxml::xml_node<>* data_min_value = out_activation_function->next_sibling("DataMin");
-		rapidxml::xml_node<>* data_max_value = data_min_value->next_sibling("DataMax");
-		rapidxml::xml_node<>* layers = data_max_value->next_sibling("Layers");
+		rapidxml::xml_node<>* layers = out_activation_function->next_sibling("Layers");
 
 		_topology = getNodeUnsignedValues(topology);
 		activation = std::stoi(activation_function->value());
 		out_activation = std::stoi(out_activation_function->value());
-		data_min = std::stod(data_min_value->value());
-		data_max = std::stod(data_max_value->value());
-		fillLayers(_layers, _topology, activation, out_activation, layers);
+		fillLayers(
+			_layers, 
+			_topology, 
+			activation,
+			out_activation, 
+			0, 
+			0, 
+			layers
+		);
 
 		file.close();
 

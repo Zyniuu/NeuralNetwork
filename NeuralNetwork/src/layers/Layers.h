@@ -2,6 +2,7 @@
 #include "../optimizers/Optimizers.h"
 #include "../../assets/rapidxml/rapidxml.hpp"
 #include "../../assets/rapidxml/rapidxml_print.hpp"
+#include "../initializers/Initializers.h"
 
 
 namespace nn
@@ -26,13 +27,14 @@ namespace nn
 		{
 		private:
 			optimizer::Optimizer* m_optimizer;
+			initializer::Initializer* m_initializer;
 
 		protected:
 			Matrix<double, Dynamic, Dynamic> m_weights_matrix;
 			VectorXd m_bias_matrix;
 
 		public:
-			NeuronDensePart(int input_size, int output_size);
+			NeuronDensePart(const int& input_size, const int& output_size, const int& initializer);
 			NeuronDensePart(const int& input_size, const int& output_size, rapidxml::xml_node<>* layer_node);
 
 			VectorXd feedForward(const VectorXd& input_vals);
@@ -41,8 +43,7 @@ namespace nn
 			void saveLayer(rapidxml::xml_document<>* document, rapidxml::xml_node<>* layer_node);
 
 		private:
-			Matrix<double, Dynamic, Dynamic> getRandomWeights(int rows, int cols, double mean, double variance);
-			VectorXd getRandomBias(int size, double mean, double variance);
+			static initializer::Initializer* generateInitializer(const int& initializer, const int& input_size, const int& output_size);
 			static VectorXd getNodeValues(rapidxml::xml_node<>* node, const int& size);
 			static MatrixXd getMatrixFromVector(const int& rows, const int& cols, const VectorXd& data);
 		};

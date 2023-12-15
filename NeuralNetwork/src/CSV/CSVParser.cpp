@@ -3,8 +3,8 @@
 
 namespace nn
 {
-    CSVParser::CSVParser(std::string filename, bool has_header)
-        : m_has_header(has_header)
+    CSVParser::CSVParser(std::string filename, char separator, int start_column_index, bool has_header, bool is_target_first)
+        : m_separator(separator), m_start_column_index(start_column_index), m_has_header(has_header), m_is_target_first(is_target_first)
     {
         m_file.open(filename);
         // check if file has been opened
@@ -76,19 +76,31 @@ namespace nn
 
                 std::istringstream ss(line);
                 std::string cell;
-                bool first_cell = true;
+                std::vector<double> cells;
+                int current_column_index = 0;
 
-                while (std::getline(ss, cell, ','))
+                while (std::getline(ss, cell, m_separator))
                 {
-                    if (first_cell)
+                    if (current_column_index >= m_start_column_index)
                     {
-                        m_target = std::stod(cell);
-                        first_cell = false;
-                        continue;
+                        cells.push_back(std::stod(cell));
+                    }
+                    ++current_column_index;
+                }
+                if (!cells.empty())
+                {
+                    if (m_is_target_first)
+                    {
+                        m_target = cells.front();
+                        cells.erase(cells.begin());
                     }
                     else
-                        m_values.push_back(std::stod(cell));
+                    {
+                        m_target = cells.back();
+                        cells.pop_back();
+                    }
                 }
+                m_values = cells;
                 return true;
             }
             return false;

@@ -1,16 +1,16 @@
 #include "Layers.h"
+#include <chrono>
 
 
 namespace nn
 {
 	namespace layer
 	{
-		NeuronDensePart::NeuronDensePart(int input_size, int output_size)
+		NeuronDensePart::NeuronDensePart(const int& input_size, const int& output_size, const int& initializer)
 		{
-			// Create matrices for weights and bias with random values from the Xavier/Glorot distribution
-			double variance = 2.0 / (input_size + output_size);
-			m_weights_matrix = getRandomWeights(output_size, input_size, 0.0, variance);
-			m_bias_matrix = getRandomBias(output_size, 0.0, variance);
+			m_initializer = generateInitializer(initializer, input_size, output_size);
+			m_weights_matrix = m_initializer->getRandomWeights();
+			m_bias_matrix = m_initializer->getRandomBias();
 		}
 
 
@@ -24,17 +24,21 @@ namespace nn
 		}
 
 
-		Matrix<double, Dynamic, Dynamic> NeuronDensePart::getRandomWeights(int rows, int cols, double mean, double variance)
+		initializer::Initializer* NeuronDensePart::generateInitializer(const int& initializer, const int& input_size, const int& output_size)
 		{
-			Rand::Vmt19937_64 generator;
-			return Rand::normal<MatrixXd>(rows, cols, generator, 0.0, variance);
-		}
-
-
-		VectorXd NeuronDensePart::getRandomBias(int size, double mean, double variance)
-		{
-			Rand::Vmt19937_64 generator;
-			return Rand::normal<VectorXd>(size, 1, generator, 0.0, variance);
+			switch (initializer)
+			{
+			case initializer::HE_NORMAL:
+				return new initializer::HeNormal(input_size, output_size);
+			case initializer::HE_UNIFORM:
+				return new initializer::HeUniform(input_size, output_size);
+			case initializer::XAVIER_NORMAL:
+				return new initializer::XavierNormal(input_size, output_size);
+			case initializer::XAVIER_UNIFORM:
+				return new initializer::XavierUniform(input_size, output_size);
+			default:
+				return nullptr;
+			}
 		}
 
 
@@ -98,9 +102,7 @@ namespace nn
 		{
 			MatrixXd out(rows, cols);
 			for (int i = 0; i < rows * cols; ++i)
-			{
 				out(i) = data(i);
-			}
 			return out;
 		}
 	}
