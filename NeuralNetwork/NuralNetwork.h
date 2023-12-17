@@ -19,8 +19,6 @@ namespace nn
 		std::vector<layer::Layer*> m_layers;
 		std::vector<unsigned> m_topology;
 		std::vector<Data> m_dataset;
-		double m_min_value;
-		double m_max_value;
 		int m_output_size;
 		int m_activation_function;
 		int m_output_activation_function;
@@ -36,9 +34,7 @@ namespace nn
 		NeuralNetwork(
 			const std::vector<unsigned>& topology, 
 			const int& activation_function, 
-			const int& output_activation_function, 
-			const double& data_min, 
-			const double& data_max, 
+			const int& output_activation_function,
 			const std::vector<layer::Layer*>& layers
 		);
 		~NeuralNetwork();

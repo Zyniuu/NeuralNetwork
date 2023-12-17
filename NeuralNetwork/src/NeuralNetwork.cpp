@@ -16,8 +16,6 @@ namespace nn
 		m_topology(topology),
 		m_activation_function(activation_function),
 		m_output_activation_function(output_activation_function),
-		m_min_value(),
-		m_max_value(),
 		m_output_size(topology.back()),
 		m_dataset()
 	{
@@ -41,15 +39,12 @@ namespace nn
 	(
 		const std::vector<unsigned>& topology, 
 		const int& activation_function, 
-		const int& output_activation_function, 
-		const double& data_min,
-		const double& data_max,
+		const int& output_activation_function,
 		const std::vector<layer::Layer*>& layers
 	) :
 		m_topology(topology), 
 		m_activation_function(activation_function), 
-		m_output_activation_function(output_activation_function), 
-		m_min_value(data_min), m_max_value(data_max), 
+		m_output_activation_function(output_activation_function),
 		m_layers(layers),
 		m_output_size(topology.back())
 	{}
@@ -113,29 +108,25 @@ namespace nn
 		rapidxml::xml_node<>* layers_node
 	)
 	{
-		rapidxml::xml_node<>* layer_node = nullptr;
-		if (layers_node)
-			layer_node = layers_node->first_node("Layer");
-		for (auto iter = topology.begin(); iter < topology.end() - 1; ++iter)
+		rapidxml::xml_node<>* layer_node = layers_node ? layers_node->first_node("Layer") : nullptr;
+
+		for (size_t i = 0; i < topology.size() - 1; ++i) 
 		{
-			if (layer_node)
+			bool is_output_layer = (i == topology.size() - 2);
+			int layer_initializer = is_output_layer ? output_layer_initializer : hidden_layer_initializer;
+			int layer_activation = is_output_layer ? output_activation_function : activation_function;
+
+			if (layer_node) 
 			{
-				layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), layer_node));
+				layers.push_back(new layer::NeuronDensePart(topology[i], topology[i + 1], layer_node));
 				layer_node = layer_node->next_sibling("Layer");
 			}
+			else 
+			{
+				layers.push_back(new layer::NeuronDensePart(topology[i], topology[i + 1], layer_initializer));
+			}
 
-			if (std::next(iter) == topology.end() - 1)
-			{
-				if (!layer_node)
-					layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), output_layer_initializer));
-				layers.push_back(createActivationLayer(output_activation_function));
-			}
-			else
-			{
-				if (!layer_node)
-					layers.push_back(new layer::NeuronDensePart(*iter, *(iter + 1), hidden_layer_initializer));
-				layers.push_back(createActivationLayer(activation_function));
-			}
+			layers.push_back(createActivationLayer(layer_activation));
 		}
 	}
 
@@ -217,12 +208,11 @@ namespace nn
 
 	double NeuralNetwork::evaluate(std::vector<Data>& dataset)
 	{
-		int correctPredictions = 0;
+		int correct_predictions = 0;
 		
 		for (const auto& sample : dataset) 
 		{
 			Eigen::VectorXd predicted = predict(sample.values);
-
 			if (predicted.size() > 1)
 			{
 				Eigen::Index predicted_class_index;
@@ -232,17 +222,16 @@ namespace nn
 				sample.target.maxCoeff(&actual_class_index);
 
 				if (predicted_class_index == actual_class_index)
-					correctPredictions++;
+					correct_predictions++;
 			}
 			else
 			{
-				int predictedClass = (predicted(0) > 0.5) ? 1 : 0;
-				if (predictedClass == sample.target(0))
-					correctPredictions++;
+				int predicted_class = (predicted(0) > 0.5) ? 1 : 0;
+				if (predicted_class == sample.target(0))
+					correct_predictions++;
 			}
 		}
-
-		return static_cast<double>(correctPredictions) / dataset.size();
+		return static_cast<double>(correct_predictions) / dataset.size();
 	}
 
 
@@ -282,7 +271,7 @@ namespace nn
 
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-			error /= dataset.size();
+			error /= training_data.size();
 
 			if (validation_split > 0)
 				accuracy = evaluate(test_data);
@@ -291,7 +280,7 @@ namespace nn
 				i + 1, 
 				epochs, 
 				((double)duration.count() / 1000), 
-				((double)duration.count() / (double)dataset.size()),
+				((double)duration.count() / (double)training_data.size()),
 				error, 
 				accuracy
 			);
@@ -360,7 +349,6 @@ namespace nn
 		std::vector<layer::Layer*> _layers;
 		std::vector<unsigned> _topology;
 		int activation, out_activation;
-		double data_min, data_max;
 		std::ifstream file(filename);
 
 		if (!file.is_open())
@@ -395,6 +383,6 @@ namespace nn
 
 		file.close();
 
-		return NeuralNetwork(_topology, activation, out_activation, data_min, data_max, _layers);
+		return NeuralNetwork(_topology, activation, out_activation, _layers);
 	}
 }
